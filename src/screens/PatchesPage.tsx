@@ -17,26 +17,14 @@ import { PATCHES, type Patch } from '../data/patches';
 
 export type PatchTab = 'patches' | 'os-upgrades';
 
-const TODAY = new Date(2026, 8, 24);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export function eosInfo(date: string) {
-  const m = /^(\d{1,2}) ([A-Za-z]{3}) (\d{4})$/.exec(date.trim());
-  if (!m) return { label: date, tone: 'plain' as const };
-  const d = new Date(Number(m[3]), MONTHS.indexOf(m[2]), Number(m[1]));
-  const days = Math.round((d.getTime() - TODAY.getTime()) / 86_400_000);
-  if (days < 0) return { label: `Unsupported since ${MONTHS[d.getMonth()]} ${d.getFullYear()}`, tone: 'risk' as const };
-  if (days <= 90) return { label: `EOS in ${days} days`, tone: 'risk' as const };
-  if (days <= 365) return { label: `EOS in ${Math.round(days / 30)} months`, tone: 'warn' as const };
-  return { label: date, tone: 'plain' as const };
-}
-
-export const EosPill = ({ date }: { date: string }) => {
-  const e = eosInfo(date);
-  return e.tone === 'plain'
-    ? <span className="text-label">{e.label}</span>
-    : <span className={`inline-block rounded px-2 py-0.5 text-[11.5px] font-semibold ${
-        e.tone === 'risk' ? 'bg-risk-soft text-risk' : 'bg-warn-soft text-warn'}`}>{e.label}</span>;
+/* Both date columns read the same way. End of Support is stored as '14 Oct 2027'
+ * and Release Date as a full stamp, so they are normalised to one shape rather
+ * than sitting side by side in two formats. */
+const eosDate = (d: string) => {
+  const m = /^(\d{1,2}) ([A-Za-z]{3}) (\d{4})$/.exec(d.trim());
+  return m ? `${m[2]} ${m[1].padStart(2, '0')}, ${m[3]}` : d;
 };
 
 const shortDate = (d: string) => d.replace(/^[A-Za-z]{3}, /, '').replace(/ \d{2}:\d{2} [AP]M$/, '');
@@ -64,7 +52,7 @@ export function PatchesPage({ tab, onTab, onOpen }: {
       </button>
     ) },
     { key: 'release', header: 'Release Date', cell: (u) => shortDate(u.releaseDate) },
-    { key: 'eos', header: 'End of Support', cell: (u) => <EosPill date={u.eosDate} /> },
+    { key: 'eos', header: 'End of Support', cell: (u) => eosDate(u.eosDate) },
     /* Compatibility takes the slot Severity has on the patch grid — an image
        carries no CVSS rating, and this is the number a technician ranks by. */
     { key: 'compat', header: 'Compatibility', cell: (u) => (
