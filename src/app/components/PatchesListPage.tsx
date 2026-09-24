@@ -174,16 +174,21 @@ function PatchesToolbar({
           ))}
 
           {/* The saved view sits AFTER the tabs, because the tab is what decides which views
-              exist — "Missing Patches" on one, "All Upgrades" on the other. Before them it read
-              as though it governed the tabs; left of the search it read as a search scope. The
-              row now descends cleanly: module → record type → slice, then search below. */}
-          <div className="flex items-center gap-4">
-            <span className="h-4 w-px bg-[#E3E8EF]" />
-            <button className="flex items-center gap-1 whitespace-nowrap text-[14px] font-medium text-[#364658] hover:text-[#3D8BD0]">
-              <span>{isUpgrades ? 'All Upgrades' : 'Missing Patches'}</span>
-              <ChevronDown size={16} className="text-[#6b7280]" />
-            </button>
-          </div>
+              exist. Before them it read as though it governed the tabs; left of the search it
+              read as a search scope. The row descends: module → record type → slice.
+              ⚠️ OS Upgrades has NO view control. A patch has real slices to choose between
+              (Missing / Installed / Declined); the fifteen published images are one set with
+              nothing to pick from, so the dropdown would open onto a single option and offer
+              the reader a choice that isn't one. */}
+          {!isUpgrades && (
+            <div className="flex items-center gap-4">
+              <span className="h-4 w-px bg-[#E3E8EF]" />
+              <button className="flex items-center gap-1 whitespace-nowrap text-[14px] font-medium text-[#364658] hover:text-[#3D8BD0]">
+                <span>Missing Patches</span>
+                <ChevronDown size={16} className="text-[#6b7280]" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* The CTA belongs to the tab — a technician authors a patch, but never an OS image. */}
