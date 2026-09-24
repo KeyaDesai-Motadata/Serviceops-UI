@@ -82,10 +82,13 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
             { label: 'End of Support', value: u.eosDate },
             { label: 'Edition', value: u.edition },
             { label: 'OS Language', value: u.language },
+            /* ⚠️ No compatibility count here. It belongs to the Endpoint tab and the
+               Prerequisites footer, which is where it can be acted on; in the key
+               fields it was a number with nothing to click and a third place for
+               the same figure to drift. */
             { label: 'Refrence Url', value: (
               <a href={u.referenceUrl} target="_blank" rel="noreferrer" className="break-all text-link hover:underline">{u.referenceUrl}</a>
             ) },
-            { label: 'Compatible Endpoints', value: <span className="font-semibold text-ok">{u.compatible}</span> },
           ]}
         />
 
