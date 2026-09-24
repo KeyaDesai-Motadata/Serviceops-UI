@@ -233,6 +233,9 @@ export function DeploymentDetail({ id, onBack, onOpenUpgrade }: {
       <InfoRail sections={[{
         title: 'Other Info',
         fields: [
+          /* Leads the rail: the category decides what the run delivers, and so
+             what every field under it means. */
+          { label: 'Deployment Category', value: d.category },
           { label: 'Notify to', value: (
             <select className="h-8 w-full rounded-md border border-line bg-white px-2 text-[12.5px] text-value focus:border-link focus:outline-none">
               <option>Select</option>
