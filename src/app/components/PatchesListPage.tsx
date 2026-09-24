@@ -152,16 +152,7 @@ function PatchesToolbar({
        * bottom rule; with `items-center` the underline would float above it. */}
       <div className="flex items-stretch justify-between border-b border-[#E3E8EF] px-6">
         <div className="flex items-stretch gap-6">
-          {/* Title + saved view, adjacent — the pattern every list page in the product uses
-              (Endpoints + "All Endpoints ▾", Requests + its view). The view is scoped to the
-              SELECTED tab, which is why its label changes with it. */}
-          <div className="flex items-center gap-3">
-            <h1 className="text-[16px] font-semibold text-[#364658]">Patches</h1>
-            <button className="flex items-center gap-1 text-[14px] font-medium text-[#364658] hover:text-[#3D8BD0]">
-              <span>{isUpgrades ? 'All Upgrades' : 'Missing Patches'}</span>
-              <ChevronDown size={16} className="text-[#6b7280]" />
-            </button>
-          </div>
+          <h1 className="flex items-center text-[16px] font-semibold text-[#364658]">Patches</h1>
 
           {/* The counts are the bifurcation signal: "32 patches, 15 upgrades" reads before
               anything is clicked. */}
@@ -181,6 +172,18 @@ function PatchesToolbar({
               </span>
             </button>
           ))}
+
+          {/* The saved view sits AFTER the tabs, because the tab is what decides which views
+              exist — "Missing Patches" on one, "All Upgrades" on the other. Before them it read
+              as though it governed the tabs; left of the search it read as a search scope. The
+              row now descends cleanly: module → record type → slice, then search below. */}
+          <div className="flex items-center gap-4">
+            <span className="h-4 w-px bg-[#E3E8EF]" />
+            <button className="flex items-center gap-1 whitespace-nowrap text-[14px] font-medium text-[#364658] hover:text-[#3D8BD0]">
+              <span>{isUpgrades ? 'All Upgrades' : 'Missing Patches'}</span>
+              <ChevronDown size={16} className="text-[#6b7280]" />
+            </button>
+          </div>
         </div>
 
         {/* The CTA belongs to the tab — a technician authors a patch, but never an OS image. */}
