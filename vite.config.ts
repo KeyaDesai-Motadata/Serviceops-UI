@@ -17,9 +17,12 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig(({ command }) => ({
-  // On GitHub Pages the site is served from /<repo-name>/, so the production
-  // build needs that base path. Local dev (`vite`) keeps the root base.
-  base: command === 'build' ? '/serviceops-ticket-detail/' : '/',
+  /* On GitHub Pages the site is served from /<repo-name>/, so the production build needs that
+   * base path. Local dev (`vite`) keeps the root base.
+   * ⚠️ This string must match the GITHUB REPO name exactly, case included — not the local
+   * folder, which is `serviceops`. Get it wrong and every asset 404s on the live site with no
+   * build error to warn you. */
+  base: command === 'build' ? '/Serviceops-UI/' : '/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
