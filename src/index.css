@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* ── Tokens, read off the product screenshots ──────────────────────────────
+ *
+ * The product's own palette, not an invented one. `ink` is the near-black the
+ * active tab pill, the left-nav selection and the primary button all share —
+ * in this UI "selected" and "primary" are the SAME fill, which is why it is one
+ * token rather than two. */
+@theme {
+  --color-ink:        #16202B;
+  --color-ink-soft:   #2B3949;
+  --color-label:      #6B7280;
+  --color-value:      #1F2937;
+  --color-line:       #E5E7EB;
+  --color-line-soft:  #EEF1F5;
+  --color-canvas:     #FFFFFF;
+  --color-strip:      #F6F7F9;
+  --color-chip:       #EEF1F5;
+  --color-link:       #2563EB;
+  --color-ok:         #16A34A;
+  --color-ok-soft:    #E8F6ED;
+  --color-risk:       #DC2626;
+  --color-risk-soft:  #FDECEC;
+  --color-warn:       #D97706;
+  --color-warn-soft:  #FEF3E2;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--color-value);
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+/* ⚠️ ONLY cursor here. `font: inherit` and `color: inherit` are plain declarations that come
+ * after the Tailwind import, so they beat every `text-*` utility on a <button> at equal
+ * specificity — which silently painted the active pill's label dark-on-dark and reset button
+ * font sizes. Tailwind's own preflight already normalises button font and color. */
+button { cursor: pointer; }
+
+/* Auto-hiding scrollbars, as the product has. */
+.scroll-y { overflow-y: auto; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.scroll-y:hover { scrollbar-color: #CBD5E1 transparent; }
+.scroll-y::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-y::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+.scroll-y:hover::-webkit-scrollbar-thumb { background: #CBD5E1; }
