@@ -21,6 +21,8 @@ interface TicketFieldsAccordionProps {
   contractMode?: boolean;
   purchaseMode?: boolean;
   patchMode?: boolean;
+  /** The patch record is an OS UPGRADE — same page, a field list without the parts an ISO has no answer for. */
+  osUpgradeMode?: boolean;
   patchDeployMode?: boolean;
   /** Deployment Type value shown in the patch-deployment fields card. */
   deploymentType?: string;
@@ -220,6 +222,7 @@ export function TicketFieldsAccordion(props: TicketFieldsAccordionProps) {
     contractMode = false,
     purchaseMode = false,
     patchMode = false,
+    osUpgradeMode = false,
     patchDeployMode = false,
     deploymentType,
     endpointMode = false,
@@ -496,6 +499,7 @@ export function TicketFieldsAccordion(props: TicketFieldsAccordionProps) {
           contractMode={contractMode}
           purchaseMode={purchaseMode}
           patchMode={patchMode}
+          osUpgradeMode={osUpgradeMode}
           patchDeployMode={patchDeployMode}
           deploymentType={deploymentType}
           endpointMode={endpointMode}

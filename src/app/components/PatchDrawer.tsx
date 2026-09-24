@@ -38,6 +38,10 @@ import { HeaderIdPill } from './HeaderIdPill';
 import { SystemFieldsRenderer } from './SystemFieldsRenderer';
 import { TicketPropertiesPanel } from './TicketPropertiesPanel';
 import { HeaderKpiRow, type HeaderKpiItem } from './HeaderKpiRow';
+import { OsUpgradePrereqTab } from './OsUpgradePrereqTab';
+import { OsUpgradeEndpointTab } from './OsUpgradeEndpointTab';
+import { OS_IMAGES } from './osUpgradeData';
+import { eosInfo, EOS_TONE, readinessFor } from './osUpgradeTechnician';
 import { DiagnosisCard } from './DiagnosisCard';
 import { SolutionCard } from './SolutionCard';
 import { AISummary } from './AISummary';
@@ -54,7 +58,7 @@ import { PatchComputersTab, INITIAL_COMPUTERS, INITIAL_INSTALLATIONS, type Patch
 import { PatchInstallationTab } from './PatchInstallationTab';
 import { PatchVulnerabilitiesTab, VULNERABILITIES } from './PatchVulnerabilitiesTab';
 import { PatchSupersededTab } from './PatchSupersededTab';
-import { PATCH_AFFECTED_PRODUCTS, PATCH_FILES } from './PatchPanelData';
+import { PATCH_AFFECTED_PRODUCTS, PATCH_FILES, osUpgradeFiles } from './PatchPanelData';
 import { ResolutionTabContent } from './ResolutionTabContent';
 import { ConversationTabContent } from './ConversationTabContent';
 import { ServiceRequestTabContent } from './ServiceRequestTabContent';
@@ -218,6 +222,14 @@ onStackMinimizedChange,
   const activeAsset = assetList.find(a => a.id === activeAssetId);
   // The RAW patch record (the adapted HardwareAsset shape has no description).
   const activePatchRecord = openAssets.find(p => p.id === activeAssetId) ?? openAssets[0];
+  /* An OS UPGRADE is the same record type on the same page — it simply has no answer for the
+     parts of a patch that describe a vendor fix (severity, supersedence, CVEs), and has two of
+     its own (its prerequisite rules, and how much of the fleet can take it). Everything below
+     branches on this one flag rather than on a second drawer. */
+  const osImage = activePatchRecord?.osUpgrade
+    ? OS_IMAGES.find((i) => i.id === activePatchRecord.osUpgrade!.imageId)
+    : undefined;
+  const isOsUpgrade = !!osImage;
   // Overview description is optional and collapsed by default; reset when switching patch tabs.
   const [descExpanded, setDescExpanded] = useState(false);
   useEffect(() => { setDescExpanded(false); }, [activeAssetId]);
@@ -280,7 +292,7 @@ onStackMinimizedChange,
   const [showForwardedMessage, setShowForwardedMessage] = useState(false);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [activeConversationTab, setActiveConversationTab] = useState<'all' | 'technician'>('all');
-  const [activeMainTab, setActiveMainTab] = useState<'overview' | 'properties' | 'hardware' | 'software' | 'consolidated' | 'installation' | 'meter' | 'baseline' | 'relationship' | 'conversation' | 'tasks' | 'approvals' | 'relations' | 'audit' | 'resolution' | 'service-request'>('properties');
+  const [activeMainTab, setActiveMainTab] = useState<'overview' | 'properties' | 'hardware' | 'software' | 'consolidated' | 'installation' | 'meter' | 'baseline' | 'relationship' | 'conversation' | 'tasks' | 'approvals' | 'relations' | 'audit' | 'resolution' | 'service-request' | 'prerequisites'>('properties');
   const [installationSearch, setInstallationSearch] = useState('');
   const [removedConsolidated, setRemovedConsolidated] = useState<Set<number>>(new Set());
   // Baseline attached to this asset (max one); Variance rows are empty by default.
@@ -1083,7 +1095,11 @@ onStackMinimizedChange,
       // Patch detail tabs — Overview (properties) · Vulnerabilities · Endpoint (computers) ·
       // Installation · Superseded · Audit Trail.
       // Approvals, Relationship, Relations and Financials were removed for the Patch page.
-      let allTabs: string[] = ['properties', 'vulnerabilities', 'computers', 'installation', 'superseded', 'audit'];
+      /* An OS Upgrade drops Vulnerabilities and Superseded — an ISO carries no CVE list and no
+         supersedence chain — and gains Prerequisites, the rule set its compatibility is judged by. */
+      let allTabs: string[] = isOsUpgrade
+        ? ['properties', 'prerequisites', 'computers', 'installation', 'audit']
+        : ['properties', 'vulnerabilities', 'computers', 'installation', 'superseded', 'audit'];
 
       const containerWidth = tabContainerRef.current.offsetWidth;
       const paddingLeft = 24; // 6 * 4 = 24px
@@ -1111,6 +1127,7 @@ onStackMinimizedChange,
         'computers': 100,
         'vulnerabilities': 120,
         'superseded': 110,
+        'prerequisites': 120,
         'audit': 100,
         'resolution': 90
       };
@@ -1149,7 +1166,7 @@ onStackMinimizedChange,
     setTimeout(calculateTabOverflow, 0);
     window.addEventListener('resize', calculateTabOverflow);
     return () => window.removeEventListener('resize', calculateTabOverflow);
-  }, [activeTicket?.id, drawerWidth, ticketRelations]);
+  }, [activeTicket?.id, drawerWidth, ticketRelations, isOsUpgrade]);
 
   // Click outside handler for More dropdown
   useEffect(() => {
@@ -2091,7 +2108,18 @@ onStackMinimizedChange,
                 </span>
               ) });
 
-              if (p?.severity) {
+              /* Platform takes Severity's slot on an upgrade: it is the fact that decides which
+                 endpoints are even in scope, and an ISO carries no CVSS rating to show instead. */
+              if (isOsUpgrade && osImage) {
+                items.push({ key: 'platform', tip: `Platform: ${osImage.platform}`, node: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="text-[11px] text-[#7B8FA5]">Platform</span>
+                    <span className="text-[12px] font-medium text-[#364658]">{osImage.platform}</span>
+                  </span>
+                ) });
+              }
+
+              if (!isOsUpgrade && p?.severity) {
                 const sevColor = ({ Critical: '#EF4444', Important: '#F59E0B', Moderate: '#EAB308', Low: '#111827', Unspecified: '#6B7280' } as Record<string, string>)[p.severity] ?? '#6B7280';
                 items.push({ key: 'severity', tip: `Severity: ${p.severity}`, node: (
                   <span className="inline-flex items-center gap-1.5">
@@ -2124,14 +2152,36 @@ onStackMinimizedChange,
                 ) });
               }
 
-              // KB number lives in the patch title for catalog updates; not every patch has one.
-              const kb = p?.name.match(/\bKB\d+\b/)?.[0] ?? null;
-              items.push({ key: 'kb', tip: kb ? `KB Number: ${kb}` : 'KB Number: not applicable for this patch', node: (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="text-[11px] text-[#7B8FA5]">KB Number</span>
-                  <span className={`text-[12px] font-medium ${kb ? 'text-[#364658]' : 'text-[#9CA3AF]'}`}>{kb ?? '---'}</span>
-                </span>
-              ) });
+              /* End of Support is what makes an upgrade urgent, and it is always populated.
+                 A KB number never is — it is parsed out of a patch TITLE, and no OS image has
+                 one, so the column would read '---' on every upgrade record. */
+              if (isOsUpgrade && osImage) {
+                const eos = eosInfo(osImage);
+                items.push({ key: 'eos', tip: `End of Support: ${osImage.eosDate}`, node: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="text-[11px] text-[#7B8FA5]">End of Support</span>
+                    {eos.tone === 'ok' ? (
+                      <span className="text-[12px] font-medium text-[#364658]">{osImage.eosDate}</span>
+                    ) : (
+                      <span
+                        className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-semibold"
+                        style={{ backgroundColor: EOS_TONE[eos.tone].bg, color: EOS_TONE[eos.tone].fg }}
+                      >
+                        {eos.label}
+                      </span>
+                    )}
+                  </span>
+                ) });
+              } else {
+                // KB number lives in the patch title for catalog updates; not every patch has one.
+                const kb = p?.name.match(/\bKB\d+\b/)?.[0] ?? null;
+                items.push({ key: 'kb', tip: kb ? `KB Number: ${kb}` : 'KB Number: not applicable for this patch', node: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="text-[11px] text-[#7B8FA5]">KB Number</span>
+                    <span className={`text-[12px] font-medium ${kb ? 'text-[#364658]' : 'text-[#9CA3AF]'}`}>{kb ?? '---'}</span>
+                  </span>
+                ) });
+              }
 
               return <HeaderKpiRow items={items} />;
             })()}
@@ -2477,14 +2527,15 @@ onStackMinimizedChange,
             <div className="border-b border-[#e5e7eb] bg-white sticky top-0 z-99">
               <div ref={tabContainerRef} className="flex items-center gap-2.5 px-6 relative overflow-x-clip">
                 {(() => {
-                  const tabConfig = [
+                  const tabConfig = ([
                     { id: 'properties', label: 'Properties' },
-                    { id: 'vulnerabilities', label: 'Vulnerabilities' },
+                    { id: 'prerequisites', label: 'Prerequisites', condition: isOsUpgrade },
+                    { id: 'vulnerabilities', label: 'Vulnerabilities', condition: !isOsUpgrade },
                     { id: 'computers', label: 'Endpoint' },
                     { id: 'installation', label: 'Deployment' },
-                    { id: 'superseded', label: 'Superseded' },
+                    { id: 'superseded', label: 'Superseded', condition: !isOsUpgrade },
                     { id: 'audit', label: 'Audit Trail' },
-                  ].filter(tab => tab.condition !== false);
+                  ] as { id: string; label: string; condition?: boolean }[]).filter(tab => tab.condition !== false);
 
                   const allowedTabIds = tabConfig.map(tab => tab.id);
                   const filteredVisibleTabs = visibleTabs.filter(tabId => allowedTabIds.includes(tabId));
@@ -2493,6 +2544,7 @@ onStackMinimizedChange,
                   const tabLabels: Record<string, string> = {
                     'overview': 'Overview',
                     'properties': 'Overview',
+                    'prerequisites': 'Prerequisites',
                     'hardware': 'Hardware',
                     'software': 'Software',
                     'consolidated': 'Consolidated Software',
@@ -2868,19 +2920,35 @@ onStackMinimizedChange,
                 const depProgress = dep('In Progress');
                 const depOther = patchInstallations.length - depSuccess - depFailed - depProgress;
 
+                /* An OS Upgrade's Endpoints gauge counts the two COMPATIBILITY statuses, not the
+                   patch buckets — a machine is eligible or it is ruled out, it is not "missing"
+                   an operating system. Machines already on the target build are excluded from
+                   the eligible set, so the gauge totals what is genuinely outstanding. */
+                const upgradeReadiness = osImage ? readinessFor(osImage) : null;
+                /* An ISO's payload is the image, not a bundle of installers. */
+                const recordFiles = osImage ? osUpgradeFiles(osImage) : PATCH_FILES;
+
                 const kpis: Kpi[] = [
-                  {
+                  ...(isOsUpgrade ? [] : [{
                     key: 'vulnerabilities', label: 'Vulnerabilities', icon: ShieldCheck, color: '#DC2626',
-                    chart: 'donut', total: VULNERABILITIES.length,
+                    chart: 'donut' as const, total: VULNERABILITIES.length,
                     segments: [
                       { label: 'Approved', value: vulnApproved, color: '#22C55E' },
                       { label: 'Declined', value: vulnDeclined, color: '#94A3B8' },
                     ],
                     onClick: () => setActiveMainTab('vulnerabilities'),
-                  },
-                  {
+                  }]),
+                  isOsUpgrade && upgradeReadiness ? {
                     key: 'endpoints', label: 'Endpoints', icon: Monitor, color: '#3D8BD0',
-                    chart: 'donut', total: patchComputers.length,
+                    chart: 'donut' as const, total: upgradeReadiness.ready + upgradeReadiness.blocked,
+                    segments: [
+                      { label: 'Compatible', value: upgradeReadiness.ready, color: '#22C55E' },
+                      { label: 'Incompatible', value: upgradeReadiness.blocked, color: '#EF4444' },
+                    ],
+                    onClick: () => setActiveMainTab('computers'),
+                  } : {
+                    key: 'endpoints', label: 'Endpoints', icon: Monitor, color: '#3D8BD0',
+                    chart: 'donut' as const, total: patchComputers.length,
                     segments: [
                       { label: 'Missing', value: epMissing, color: '#F59E0B' },
                       { label: 'Installed', value: epInstalled, color: '#22C55E' },
@@ -2899,20 +2967,22 @@ onStackMinimizedChange,
                     ],
                     onClick: () => setActiveMainTab('installation'),
                   },
-                  {
+                  /* No Affected Products card on an upgrade: the image IS the product, so a card
+                     listing what it affects would only ever restate the record's own title. */
+                  ...(isOsUpgrade ? [] : [{
                     key: 'products', label: 'Affected Products', icon: Layers, color: '#0EA5E9',
-                    chart: 'list', total: PATCH_AFFECTED_PRODUCTS.length, half: true,
+                    chart: 'list' as const, total: PATCH_AFFECTED_PRODUCTS.length, half: true,
                     items: PATCH_AFFECTED_PRODUCTS.slice(0, 2).map((p) => ({
                       icon: p.type === 'Application' ? <AppWindow size={14} /> : <Monitor size={14} />,
                       primary: p.name,
                       secondary: p.type,
                     })),
                     onClick: () => setActiveGroup('affected-products'),
-                  },
+                  }]),
                   {
                     key: 'files', label: 'Files', icon: Files, color: '#64748B',
-                    chart: 'list', total: PATCH_FILES.length, half: true,
-                    items: PATCH_FILES.slice(0, 2).map((f) => ({
+                    chart: 'list', total: recordFiles.length, half: !isOsUpgrade,
+                    items: recordFiles.slice(0, 2).map((f) => ({
                       icon: <FileText size={14} />,
                       primary: f.name,
                       secondary: `${f.size} · Language: ${f.language}`,
@@ -6547,9 +6617,17 @@ onStackMinimizedChange,
             {/* Vulnerabilities Tab Content — Approved / Declined CVE buckets */}
             {activeMainTab === 'vulnerabilities' && <PatchVulnerabilitiesTab endpoints={patchComputers} />}
 
-            {/* Computers Tab Content — Missing / Installed / Ignored buckets */}
+            {/* Prerequisites Tab Content — OS Upgrade only. The read-only rule set the Endpoint
+                tab's Compatible / Incompatible verdicts are computed from. */}
+            {activeMainTab === 'prerequisites' && osImage && <OsUpgradePrereqTab img={osImage} onViewEndpoints={() => setActiveMainTab('computers')} />}
+
+            {/* Computers Tab Content — Missing / Installed / Ignored buckets for a patch; for an
+                OS Upgrade the same tab answers a different question, so it is a different grid:
+                which endpoints are ELIGIBLE, and which of those the prerequisites rule out. */}
             {activeMainTab === 'computers' && (
-              <PatchComputersTab computers={patchComputers} setComputers={setPatchComputers} onInstall={handleInstallPatch} />
+              isOsUpgrade && osImage
+                ? <OsUpgradeEndpointTab img={osImage} />
+                : <PatchComputersTab computers={patchComputers} setComputers={setPatchComputers} onInstall={handleInstallPatch} />
             )}
 
             {/* Installation Tab Content — deployment records for this patch */}
@@ -7774,6 +7852,8 @@ onStackMinimizedChange,
             softwareMode={true}
             nonItMode={true}
             patchMode={true}
+            osUpgradeMode={isOsUpgrade}
+            patchFilesSeed={osImage ? osUpgradeFiles(osImage) : undefined}
             assetState={assetState}
             activeGroup={activeGroup}
             setActiveGroup={setActiveGroup}

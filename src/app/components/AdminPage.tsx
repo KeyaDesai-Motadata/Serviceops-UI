@@ -6,7 +6,6 @@ import { AdminOverview } from './AdminOverview';
 import { ADMIN_SECTIONS, sectionByTitle } from './adminData';
 import { AdminBomModule } from './AdminBomModule';
 import type { BomAdminScreen } from './AdminBomModule';
-import { AdminOsUpgradeModule } from './AdminOsUpgradeModule';
 import { AdminSupportPortalModule } from './AdminSupportPortalModule';
 
 /** Sections that have a real module behind them rather than only a card grid. Selecting one in
@@ -22,10 +21,10 @@ const BOM_SCREEN_FOR: Record<string, BomAdminScreen> = {
 };
 
 /** Level-2 cards that own a module even though their SECTION doesn't, keyed "<section>/<card>".
- *  Patch Management is still a card grid — OS Upgrade is the one entry with a real screen behind
- *  it, so only that row swaps the pane. */
+ *  ⚠️ OS Upgrade used to live here. It moved to the technician Patches module (#/patches/os-upgrades),
+ *  where the upgrades are worked rather than configured, so Patch Management is a card grid again
+ *  with no screen of its own. */
 const CARD_MODULES: Record<string, string> = {
-  'Patch Management/OS Upgrade': 'OS Upgrade',
   /* ⚠️ Support Channels, not Organization. The portal's settings already lived here, so putting its
      customization anywhere else meant two homes for one subject. The card that used to open this
      from Organization is gone rather than left as a second door. */
@@ -164,12 +163,6 @@ export function AdminPage({ onNavigate, moduleSlug, onModuleChange, portalSlug, 
                   onModuleChange?.(slug);
                 }}
               />
-            </div>
-          ) : module === 'OS Upgrade' ? (
-            /* White, not the hub's grey: an admin LISTING is the same surface as a technician
-               portal list page — head, search, then a full-bleed table with no card around it. */
-            <div className="min-h-0 flex-1 overflow-y-auto bg-white">
-              <AdminOsUpgradeModule />
             </div>
           ) : module === 'Support Portal' ? (
             <div className="min-h-0 flex-1 overflow-y-auto bg-white">

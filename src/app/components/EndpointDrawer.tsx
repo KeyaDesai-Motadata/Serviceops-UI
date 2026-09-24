@@ -6540,9 +6540,18 @@ onStackMinimizedChange,
               <EndpointBomTab endpointId={activeAsset?.id ?? ''} hostName={activeAsset?.name ?? ''} />
             )}
 
-            {/* Patches Tab Content — this endpoint's Missing / Installed / Ignored patches */}
+            {/* Patches Tab Content — this endpoint's software patches, and the OS upgrade it
+                qualifies for (or the prerequisites blocking it). */}
             {activeMainTab === 'computers' && (
-              <EndpointPatchesTab patches={endpointPatches} setPatches={setEndpointPatches} />
+              <EndpointPatchesTab
+                patches={endpointPatches}
+                setPatches={setEndpointPatches}
+                endpointId={activeAsset?.id ?? ''}
+                hostName={activeAsset?.name ?? ''}
+                osName={activePatchRecord?.endpoint?.osName ?? ''}
+                osVersion={activePatchRecord?.endpoint?.version ?? null}
+                architecture={activePatchRecord?.endpoint?.architecture ?? '64 BIT'}
+              />
             )}
 
             {/* Deployment Tab Content — Patch / Package / Registry pushes to this endpoint */}

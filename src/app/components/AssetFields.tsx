@@ -364,6 +364,8 @@ interface AssetFieldsProps {
   purchaseMode?: boolean;
   // Patch variant: shows ONLY the patch fields (category/severity/approval/test/release date/…).
   patchMode?: boolean;
+  /** The patch record is an OS UPGRADE — same page, a field list without the parts an ISO has no answer for. */
+  osUpgradeMode?: boolean;
   // Patch DEPLOYMENT page: within patchMode, show the deployment-run fields
   // (Status / Task Type / Deployment Policy / Install After / Expiry Date) instead.
   patchDeployMode?: boolean;
@@ -380,7 +382,7 @@ interface AssetFieldsProps {
   footer?: React.ReactNode;
 }
 
-export function AssetFields({ state, pinnedFields, togglePinField, propertiesSearchQuery, softwareMode = false, nonItMode = false, licenseMode = false, contractMode = false, purchaseMode = false, patchMode = false, patchDeployMode = false, deploymentType, endpointMode = false, cveMode = false, cmdbMode = false, footer }: AssetFieldsProps) {
+export function AssetFields({ state, pinnedFields, togglePinField, propertiesSearchQuery, softwareMode = false, nonItMode = false, licenseMode = false, contractMode = false, purchaseMode = false, patchMode = false, osUpgradeMode = false, patchDeployMode = false, deploymentType, endpointMode = false, cveMode = false, cmdbMode = false, footer }: AssetFieldsProps) {
   const { assetType, setAssetType, status, setStatus, impact, setImpact, managedByGroup, setManagedByGroup, managedBy, setManagedBy, ci } = state;
   const softwareType = state.softwareType ?? '';
   const setSoftwareType = state.setSoftwareType ?? (() => {});
@@ -607,6 +609,43 @@ export function AssetFields({ state, pinnedFields, togglePinField, propertiesSea
       { label: 'Last Updated By', value: 'Rakesh Rathod', kind: 'user' },
     ];
 
+    /* OS UPGRADE variant of Patch Properties.
+     *
+     * Severity, Superseded Status and Bulletin Id are GONE, not blanked: an ISO carries no CVSS
+     * rating, no supersedence chain and no vendor bulletin, and a row that can only ever read
+     * '---' teaches a reader the page is broken. Edition, OS Language and Platform take their
+     * place, because those are what decide which endpoints an image even applies to.
+     *
+     * There is deliberately NO Upload Status row. The file is downloaded straight from source,
+     * so there is no upload to report — that state belongs to the admin ISO library, not here. */
+    const OS_UPGRADE_FIELDS: PatchField[] = [
+      { label: 'Patch Category', value: 'OS Upgrade' },
+      { label: 'Approval Status', value: 'Approved', kind: 'approval' },
+      { label: 'Test Status', value: 'Not Tested' },
+      { label: 'Release Date', value: '30 Sep 2025' },
+      { label: 'End of Support', value: '14 Oct 2027' },
+      { label: 'Platform', value: 'Windows' },
+      { label: 'Edition', value: 'Enterprise' },
+      { label: 'Architecture', value: '64 BIT' },
+      { label: 'OS Language', value: 'English (US)' },
+      { label: 'Refrence Url', value: 'https://www.microsoft.com/software-download/windows11', kind: 'url' },
+      { label: 'UUID', value: 'win11-25h2-enterprise-x64' },
+      { label: 'Source', value: 'Vendor Catalog' },
+      { label: 'Status', value: 'Published' },
+      { label: 'Download Status', value: 'Success' },
+      { label: 'Download On', value: 'Sun, Jul 12, 2026 10:22 AM' },
+      { label: 'Download Size', value: '5.2 GB' },
+      { label: 'Reboot Required', value: 'Yes' },
+      { label: 'Support Uninstallation', value: 'No' },
+      { label: 'Approved By', value: 'Rakesh Rathod', kind: 'user' },
+      { label: 'Approved On', value: 'Mon, Jul 20, 2026 04:56 PM' },
+      { label: 'Patch Type', value: 'OS Upgrade' },
+      { label: 'Created Date', value: 'Sun, Jul 12, 2026 10:22 AM', sub: '(2 months ago)' },
+      { label: 'Last Updated Date', value: 'Mon, Jul 20, 2026 05:01 PM', sub: '(2 months ago)' },
+      { label: 'Created By', value: 'System' },
+      { label: 'Last Updated By', value: 'Rakesh Rathod', kind: 'user' },
+    ];
+
     // Patch DEPLOYMENT page variant — the deployment run's own properties, not the patch catalog's.
     const PATCH_DEPLOYMENT_FIELDS: PatchField[] = [
       /* Leads the card: it decides what the run delivers, and therefore what every field under
@@ -670,7 +709,7 @@ export function AssetFields({ state, pinnedFields, togglePinField, propertiesSea
       { label: 'Last Updated Date', value: 'Mon, Jul 27, 2026 11:26 AM' },
     ];
 
-    const fields = patchDeployMode ? PATCH_DEPLOYMENT_FIELDS : endpointMode ? ENDPOINT_FIELDS : cveMode ? CVE_FIELDS : PATCH_FIELDS;
+    const fields = patchDeployMode ? PATCH_DEPLOYMENT_FIELDS : endpointMode ? ENDPOINT_FIELDS : cveMode ? CVE_FIELDS : osUpgradeMode ? OS_UPGRADE_FIELDS : PATCH_FIELDS;
 
     const roRow = (f: PatchField) => {
       const empty = !f.value || f.value === '---';

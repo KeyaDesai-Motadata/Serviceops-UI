@@ -1,7 +1,7 @@
 /* URL routing — the one place that says what a screen is called in the address bar.
  *
  * ⚠️ HASH routing, deliberately. This deploys as a static build to GitHub Pages, which has no
- * SPA rewrite: a real path like /serviceops-ticket-detail/admin/os-upgrade would 404 the moment
+ * SPA rewrite: a real path like /serviceops-ticket-detail/admin/bom-retention would 404 the moment
  * anyone opened it directly or refreshed. A hash never reaches the server, so every link here
  * works on a cold load with no server config at all.
  *
@@ -50,7 +50,6 @@ export interface AdminRoute {
 /* Only screens that actually exist. A section that is still a card grid has no slug, because a
  * URL promising a screen that isn't built is worse than no URL. */
 export const ADMIN_ROUTES: readonly AdminRoute[] = [
-  { slug: 'os-upgrade', section: 'Patch Management', card: 'OS Upgrade' },
   { slug: 'support-portal', section: 'Support Channels', card: 'Support Portal' },
   { slug: 'bom-management', section: 'BOM Management' },
   { slug: 'bom-licensing', section: 'BOM Management', card: 'BOM Licensing' },
@@ -66,8 +65,16 @@ export const adminSlugFor = (section: string, card?: string): string | undefined
   (ADMIN_ROUTES.find((r) => r.section === section && r.card === card)
     ?? (card ? undefined : ADMIN_ROUTES.find((r) => r.section === section && !r.card)))?.slug;
 
+/* The Patches page carries two record types in two grids, and a link into a ticket has to be able
+ * to name which one. Only the second tab is addressed — `#/patches` is the patch list, as it
+ * always was, so every existing link keeps working. */
+export type PatchTab = 'patches' | 'os-upgrades';
+export const PATCH_TABS: readonly PatchTab[] = ['patches', 'os-upgrades'];
+
 export interface Route {
   page: Page;
+  /** Which grid the Patches page is showing. Absent = the software-patch list. */
+  tab?: PatchTab;
   /** Admin module slug, when the page is 'admin' and a module is open. */
   admin?: string;
   /* A record INSIDE an admin module — today only a support portal, which is why it is named for
@@ -87,6 +94,10 @@ export function parseHash(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const page = parts[0] as Page | undefined;
   if (!page || !PAGES.includes(page)) return { page: DEFAULT_PAGE };
+  if (page === 'patches') {
+    const tab = parts[1] as PatchTab | undefined;
+    return tab && PATCH_TABS.includes(tab) ? { page, tab } : { page };
+  }
   if (page !== 'admin') return { page };
   const slug = parts[1];
   if (!slug || !adminRouteBySlug(slug)) return { page };
@@ -97,6 +108,8 @@ export function parseHash(hash: string): Route {
 }
 
 export function formatHash(route: Route): string {
+  // The default tab stays at the bare address, so #/patches never grows a redundant segment.
+  if (route.page === 'patches') return route.tab && route.tab !== 'patches' ? `#/patches/${route.tab}` : '#/patches';
   if (route.page === 'admin' && route.admin) {
     return route.portal ? `#/admin/${route.admin}/${route.portal}` : `#/admin/${route.admin}`;
   }
@@ -134,6 +147,7 @@ const PAGE_TITLES: Record<Page, string> = {
 /* An admin screen is named by its CARD where it has one, otherwise by its section — the same
  * words the sidebar uses, so the tab agrees with the nav rather than inventing a third name. */
 export function titleFor(route: Route): string {
+  if (route.page === 'patches' && route.tab === 'os-upgrades') return `OS Upgrades · ${PRODUCT}`;
   const r = route.page === 'admin' && route.admin ? adminRouteBySlug(route.admin) : undefined;
   const name = r ? (r.card ?? r.section) : PAGE_TITLES[route.page];
   return `${name} · ${PRODUCT}`;

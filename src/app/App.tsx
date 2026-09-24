@@ -82,7 +82,13 @@ export default function App() {
       {activePage === 'contracts' && <ContractsListPage onNavigate={navigate} />}
       {activePage === 'purchases' && <PurchasesListPage onNavigate={navigate} />}
       {activePage === 'cmdb' && <CmdbListPage onNavigate={navigate} />}
-      {activePage === 'patches' && <PatchesListPage onNavigate={navigate} />}
+      {activePage === 'patches' && (
+        <PatchesListPage
+          onNavigate={navigate}
+          tab={route.tab}
+          onTabChange={(t) => go({ page: 'patches', tab: t })}
+        />
+      )}
       {activePage === 'patch-deployments' && <PatchDeploymentsListPage onNavigate={navigate} />}
       {activePage === 'endpoints' && <EndpointsListPage onNavigate={navigate} />}
       {activePage === 'vulnerabilities' && <VulnerabilitiesListPage onNavigate={navigate} />}

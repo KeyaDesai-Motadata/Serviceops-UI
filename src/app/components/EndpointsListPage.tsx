@@ -123,7 +123,7 @@ const endpointToPatchShape = (e: Endpoint): Patch => ({
   rebootRequired: e.rebootRequired === 'Yes' ? 'Yes' : 'No',
   approvalStatus: 'Approved',
   category: 'Endpoint',
-  endpoint: { agentOnline: e.agentOnline, systemHealth: e.systemHealth },
+  endpoint: { agentOnline: e.agentOnline, systemHealth: e.systemHealth, osName: e.osName, version: e.version, architecture: e.architecture },
 });
 
 export function EndpointsListPage({ onNavigate }: { onNavigate: (page: string) => void }) {

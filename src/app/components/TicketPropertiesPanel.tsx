@@ -43,6 +43,11 @@ interface TicketPropertiesPanelProps {
   purchaseMode?: boolean;
   // Patch variant of the asset field set (category/severity/approval/test/release date/…)
   patchMode?: boolean;
+  /** The patch record is an OS UPGRADE — same page, a field list without the parts an ISO has no answer for. */
+  osUpgradeMode?: boolean;
+  /** The files this record is made of. The drawer knows which record is open, so it supplies
+   *  them; without it the group falls back to the patch installer bundle. */
+  patchFilesSeed?: { name: string; size: string; language: string }[];
   // Patch DEPLOYMENT page: deployment-run fields in the Patch Fields accordion
   patchDeployMode?: boolean;
   /** Deployment Type value shown in the patch-deployment fields card. */
@@ -359,6 +364,8 @@ export function TicketPropertiesPanel(props: TicketPropertiesPanelProps) {
     contractMode = false,
     purchaseMode = false,
     patchMode = false,
+    osUpgradeMode = false,
+    patchFilesSeed,
     patchDeployMode = false,
     deploymentType,
     endpointMode = false,
@@ -718,7 +725,14 @@ export function TicketPropertiesPanel(props: TicketPropertiesPanelProps) {
   const [expandedIntegrations, setExpandedIntegrations] = useState<Set<string>>(new Set());
   const [similarFilter, setSimilarFilter] = useState<'All' | 'Request' | 'Problem' | 'Change'>('All');
   // Patch File Details — the patch's files (can be empty → upload manually). Patch page only.
-  const [patchFiles, setPatchFiles] = useState<{ name: string; size: string; language: string }[]>(PATCH_FILES);
+  /* An OS Upgrade's File Details is the image itself; a patch's is its installer bundle. */
+  const [patchFiles, setPatchFiles] = useState<{ name: string; size: string; language: string }[]>(
+    () => patchFilesSeed ?? PATCH_FILES,
+  );
+  /* The stack swaps records without remounting this panel, so the seed has to be re-applied —
+     a useState initializer runs once and would leave the previous image's file on screen. */
+  const filesKey = (patchFilesSeed ?? PATCH_FILES).map((f) => f.name).join('|');
+  useEffect(() => { setPatchFiles(patchFilesSeed ?? PATCH_FILES); }, [filesKey]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handlePatchFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1842,6 +1856,7 @@ export function TicketPropertiesPanel(props: TicketPropertiesPanelProps) {
           contractMode={contractMode}
           purchaseMode={purchaseMode}
           patchMode={patchMode}
+          osUpgradeMode={osUpgradeMode}
           patchDeployMode={patchDeployMode}
           deploymentType={deploymentType}
           endpointMode={endpointMode}
@@ -3803,8 +3818,10 @@ export function TicketPropertiesPanel(props: TicketPropertiesPanelProps) {
           </Tooltip>
           )}
 
-          {/* Affected Products — Patch page only (replaces Notes; deployment/endpoint pages drop it) */}
-          {patchMode && !patchDeployMode && !endpointMode && !cveMode && (
+          {/* Affected Products — Patch page only (replaces Notes; deployment/endpoint pages drop
+              it, and so does an OS Upgrade: the image IS the product, so the group could only
+              ever restate the record's own title). */}
+          {patchMode && !patchDeployMode && !endpointMode && !cveMode && !osUpgradeMode && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Search, X, Trash2, Download, RotateCcw, EyeOff, FileDown, ChevronDown, Check, Layers } from 'lucide-react';
+import { Search, X, Trash2, Download, RotateCcw, EyeOff, FileDown, ChevronDown, Check, Layers, MonitorUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Pagination } from './Pagination';
+import { upgradeForEndpoint } from './osUpgradeTechnician';
+import type { EndpointUpgrade } from './osUpgradeTechnician';
 import type { LucideIcon } from 'lucide-react';
 
 /* Patches tab of the ENDPOINT detail page (EndpointDrawer) — the inverse of the Patch page's
@@ -79,10 +81,53 @@ const Dash = () => <span className="text-[12px] text-[#9ca3af]">---</span>;
 interface EndpointPatchesTabProps {
   patches: EndpointPatch[];
   setPatches: Dispatch<SetStateAction<EndpointPatch[]>>;
+  /** The machine this tab is about — what the OS Upgrade sub-tab is evaluated against. */
+  endpointId?: string;
+  hostName?: string;
+  osName?: string;
+  osVersion?: string | null;
+  architecture?: string;
 }
 
-export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabProps) {
-  const [bucket, setBucket] = useState<PatchBucket>('Missing');
+/* OS Upgrade is a FOURTH BUCKET, after Ignored — not a second tab strip above these pills.
+ * The question a technician is asking is the same one the other three answer ("what is
+ * outstanding on this machine"); only the answer has a different shape, because an upgrade is a
+ * migration a machine qualifies for rather than a list of fixes it is missing. So the pill row
+ * stays the one control, and the view below it swaps. */
+const OS_BUCKET = 'OS Upgrade' as const;
+type ViewBucket = PatchBucket | typeof OS_BUCKET;
+
+/* The OS upgrade this machine is offered, shaped as an EndpointPatch so it renders through the
+ * SAME grid as every other bucket — same columns, same order, same cells. Building the row
+ * rather than branching the table is what guarantees the parity: there is no second table that
+ * could drift from the first.
+ *
+ * The columns an image has no answer for are left null and render as `---`, exactly as they
+ * already do for the many catalog patches that carry no Application, Bulletin Id or KB Number. */
+function upgradeAsRow(u: EndpointUpgrade): EndpointPatch[] {
+  if (!u.img || (u.state !== 'Ready' && u.state !== 'Blocked')) return [];
+  const img = u.img;
+  return [{
+    id: img.id,
+    name: img.title,
+    category: 'OS Upgrade',
+    severity: 'Unspecified',
+    approvalStatus: 'Approved',
+    application: null,
+    releaseDate: img.releaseDate,
+    bulletinId: null,
+    kbNumber: null,
+    downloadSize: img.size,
+    uuid: `${img.name}-${img.osVersion}-${img.architecture}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    bucket: 'Missing',
+  }];
+}
+
+export function EndpointPatchesTab({
+  patches, setPatches, endpointId = '', hostName = '', osName = '', osVersion = null, architecture = '64 BIT',
+}: EndpointPatchesTabProps) {
+  const upgrade = upgradeForEndpoint(endpointId, osName, osVersion, architecture);
+  const [bucket, setBucket] = useState<ViewBucket>('Missing');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showMore, setShowMore] = useState(false);
@@ -90,7 +135,7 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
   const [category, setCategory] = useState<string>(ALL_CATEGORIES);
   const [showCategory, setShowCategory] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
-  const categoryOptions = [ALL_CATEGORIES, ...Array.from(new Set(patches.map((p) => p.category))).sort()];
+  const categoryOptions = [ALL_CATEGORIES, ...Array.from(new Set([...patches.map((p) => p.category), OS_BUCKET])).sort()];
   const categoryQuery = categorySearch.trim().toLowerCase();
   const filteredCategories = categoryQuery ? categoryOptions.filter((c) => c.toLowerCase().includes(categoryQuery)) : categoryOptions;
   const closeCategoryMenu = () => { setShowCategory(false); setCategorySearch(''); };
@@ -122,7 +167,7 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
   const notify = (msg: string) => { const n = selected.size; clearSelection(); toast.success(`${n} patch${n > 1 ? 'es' : ''} — ${msg}`); };
 
   // Bulk actions available for the current bucket. `tone` drives styling; `danger` sorts last.
-  type BulkAction = { key: string; label: string; icon: LucideIcon; tone?: 'primary' | 'danger'; buckets: PatchBucket[]; run: () => void };
+  type BulkAction = { key: string; label: string; icon: LucideIcon; tone?: 'primary' | 'danger'; buckets: ViewBucket[]; run: () => void };
   const ALL_ACTIONS: BulkAction[] = [
     // Prototype behavior: installing moves the patch straight to Installed (no deployment queue here).
     { key: 'install', label: 'Install Patch', icon: Download, tone: 'primary', buckets: ['Missing', 'Ignored'], run: () => moveSelected('Installed', 'installation initiated') },
@@ -131,21 +176,27 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
     { key: 'restore', label: 'Restore', icon: RotateCcw, buckets: ['Ignored'], run: () => moveSelected('Missing', 'restored') },
     { key: 'export', label: 'Export Selected', icon: FileDown, buckets: ['Installed', 'Ignored'], run: () => notify('exported') },
     { key: 'delete', label: 'Delete', icon: Trash2, tone: 'danger', buckets: ['Missing', 'Installed', 'Ignored'], run: deleteSelected },
+    /* The upgrade's parallel of Install Patch. Selection has to lead somewhere, or the bucket
+       offers checkboxes and an empty Take Action menu. */
+    { key: 'deploy', label: 'Deploy Upgrade', icon: Download, tone: 'primary', buckets: [OS_BUCKET], run: () => { clearSelection(); toast.success('OS upgrade queued for this endpoint'); } },
   ];
   const actions = ALL_ACTIONS.filter((a) => a.buckets.includes(bucket));
 
   const counts: Record<PatchBucket, number> = { Missing: 0, Installed: 0, Ignored: 0 };
   scoped.forEach((p) => { counts[p.bucket] += 1; });
 
+  /* One row, or none. The category filter still applies — an OS upgrade's category IS
+     "OS Upgrade", so narrowing to any other category correctly empties the bucket. */
+  const osRows = upgradeAsRow(upgrade).filter((r) => category === ALL_CATEGORIES || r.category === category);
+
   const q = search.trim().toLowerCase();
-  const rows = scoped.filter((p) => p.bucket === bucket).filter((p) =>
+  const bucketRows = bucket === OS_BUCKET ? osRows : scoped.filter((p) => p.bucket === bucket);
+  const rows = bucketRows.filter((p) =>
     !q ||
     p.id.toLowerCase().includes(q) ||
     p.name.toLowerCase().includes(q) ||
     p.category.toLowerCase().includes(q) ||
-    (p.application ?? '').toLowerCase().includes(q) ||
     (p.kbNumber ?? '').toLowerCase().includes(q) ||
-    (p.bulletinId ?? '').toLowerCase().includes(q) ||
     p.uuid.toLowerCase().includes(q)
   );
 
@@ -157,9 +208,22 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
   const totalPages = Math.ceil(rows.length / itemsPerPage) || 1;
   const pageRows = rows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  /* 1 or 0: a machine is offered at most one target build. A zero still gets the pill —
+     "nothing to upgrade to" is an answer a technician came here for, and the empty state says
+     WHICH kind of nothing it is. */
+  const upgradeCount = osRows.length;
+  const isOsBucket = bucket === OS_BUCKET;
+  const emptyLine = !isOsBucket
+    ? `No ${bucket.toLowerCase()} patches found.`
+    : upgrade.state === 'Current'
+      ? `This endpoint is running the latest available build${upgrade.img ? ` (${upgrade.img.title})` : ''}.`
+      : upgrade.state === 'None'
+        ? upgrade.note ?? 'No OS upgrade is published for this platform.'
+        : 'No OS upgrade patches found.';
+
   return (
     <div className="px-6 py-4">
-      {/* Top row — category filter + bucket pills (Missing / Installed / Ignored) */}
+      {/* Top row — category filter + bucket pills (Missing / Installed / Ignored / OS Upgrade) */}
       <div className="flex items-center gap-2 flex-wrap mb-3">
         <div className="relative flex-shrink-0">
           <button
@@ -219,6 +283,18 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
             </span>
           </button>
         ))}
+
+        {/* OS Upgrade — same pill, one bucket further along. */}
+        <button
+          onClick={() => { setBucket(OS_BUCKET); setSelected(new Set()); }}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-[13px] font-medium transition-colors ${isOsBucket ? 'bg-[#EBF5FF] border-[#3D8BD0] text-[#3D8BD0]' : 'bg-white border-[#DFE5ED] text-[#364658] hover:bg-[#F5F7FA] hover:border-[#3D8BD0]'}`}
+        >
+          <MonitorUp size={14} className={isOsBucket ? 'text-[#3D8BD0]' : 'text-[#7B8FA5]'} />
+          OS Upgrade
+          <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold ${isOsBucket ? 'bg-[#3D8BD0] text-white' : 'bg-[#EEF2F6] text-[#64748B]'}`}>
+            {upgradeCount}
+          </span>
+        </button>
       </div>
 
       {/* Search */}
@@ -282,7 +358,7 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
 
       {/* Table — standard borderless style (matches the other detail-page tabs) */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1700px]">
+        <table className="w-full min-w-[1420px]">
           <thead className="border-b border-[#e5e7eb]">
             <tr>
               <th className="w-[40px] px-4 py-2.5 text-left">
@@ -293,14 +369,14 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
                   className="h-3.5 w-3.5 cursor-pointer rounded border-[#d1d5db] text-[#3D8BD0] focus:ring-[#3D8BD0] focus:ring-offset-0"
                 />
               </th>
-              {['Patch ID', 'Name', 'Patch Category', 'Severity', 'Approval Status', 'Application', 'Release Date', 'Bulletin Id', 'KB Number', 'Download Size', 'UUID'].map((h) => (
+              {['Patch ID', 'Name', 'Patch Category', 'Severity', 'Approval Status', 'Release Date', 'KB Number', 'Download Size', 'UUID'].map((h) => (
                 <th key={h} className="px-4 py-2.5 text-left text-[12px] font-semibold text-[#364658] tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e5e7eb] bg-white">
             {pageRows.length === 0 ? (
-              <tr><td colSpan={12} className="px-4 py-12 text-center text-[13px] text-[#9CA3AF]">No {bucket.toLowerCase()} patches found.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-12 text-center text-[13px] text-[#9CA3AF]">{emptyLine}</td></tr>
             ) : pageRows.map((p) => (
               <tr key={p.id} className="hover:bg-[#f9fafb] transition-colors">
                 <td className="px-4 py-3">
@@ -328,9 +404,7 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
                     {p.approvalStatus}
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#364658]">{p.application ?? <Dash />}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#364658]">{p.releaseDate}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#364658]">{p.bulletinId ?? <Dash />}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#364658]">{p.kbNumber ?? <Dash />}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#364658]">{p.downloadSize}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#364658]"><span className="block max-w-[180px] truncate" title={p.uuid}>{p.uuid}</span></td>
@@ -354,3 +428,4 @@ export function EndpointPatchesTab({ patches, setPatches }: EndpointPatchesTabPr
     </div>
   );
 }
+

@@ -36,6 +36,18 @@ export const PATCH_FILES: PatchFile[] = [
   { name: 'ndp48-x86-x64-allos-enu.exe', size: '121.6 MB', language: 'all' },
 ];
 
+/* An OS Upgrade's payload is the image itself, downloaded from source — not a bundle of
+ * installers. Derived from the catalogue record so the File Details group, the Overview Files
+ * card and the record's own Download Size all quote the same file. */
+export function osUpgradeFiles(img: { fileName: string; size: string; language: string; title: string }): PatchFile[] {
+  return [{
+    // A catalogue entry with no ISO on disk still has a name it will be published under.
+    name: img.fileName || `${img.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.iso`,
+    size: img.size,
+    language: img.language,
+  }];
+}
+
 /** Sum the human-readable file sizes ("287.4 MB") into a single display string. */
 export function totalPatchFileSize(files: PatchFile[] = PATCH_FILES): string {
   const mb = files.reduce((sum, f) => {
