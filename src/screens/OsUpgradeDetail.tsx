@@ -141,8 +141,8 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
             {/* Buckets stack down the left, as the product's Patches tab does. */}
             <SideNav
               items={[
-                { id: 'Compatible', label: `Compatible (${u.compatible})` },
-                { id: 'Incompatible', label: `Incompatible (${u.incompatible})` },
+                { id: 'Compatible', label: 'Compatible' },
+                { id: 'Incompatible', label: 'Incompatible' },
               ]}
               active={bucket}
               onChange={(b) => setBucket(b as typeof bucket)}

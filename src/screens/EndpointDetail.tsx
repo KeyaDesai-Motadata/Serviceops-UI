@@ -64,8 +64,6 @@ export function EndpointDetail({ onBack, onOpenUpgrade }: { onBack: () => void; 
     { key: 'uuid', header: 'UUID', cell: (r) => <span className="block max-w-[220px] truncate">{r.uuid}</span> },
   ];
 
-  const counts = (b: Row['bucket']) => ROWS.filter((r) => r.bucket === b).length;
-
   return (
     <div className="flex h-full min-h-0">
       <div className="flex min-w-0 flex-1 flex-col">
@@ -100,7 +98,7 @@ export function EndpointDetail({ onBack, onOpenUpgrade }: { onBack: () => void; 
           <div className="flex min-h-0 flex-1">
             <SideNav
               items={(['Missing', 'Installed', 'Ignored', 'OS Upgrade'] as const)
-                .map((b) => ({ id: b, label: `${b}${counts(b) ? ` (${counts(b)})` : ''}` }))}
+                .map((b) => ({ id: b, label: b }))}
               active={bucket}
               onChange={(b) => setBucket(b as Row['bucket'])}
             />
