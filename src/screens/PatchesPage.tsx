@@ -95,15 +95,15 @@ export function PatchesPage({ tab, onTab, onOpen }: {
     </button>
   );
 
-  const TABS: { key: PatchTab; label: string; count: number }[] = [
-    { key: 'patches', label: 'Software Patches', count: PATCHES.length },
-    { key: 'os-upgrades', label: 'OS Upgrades', count: OS_UPGRADES.length },
+  const TABS: { key: PatchTab; label: string }[] = [
+    { key: 'patches', label: 'Software Patches' },
+    { key: 'os-upgrades', label: 'OS Upgrades' },
   ];
 
   return (
     <div className="flex h-full flex-col">
-      {/* One row: title, tabs, then the view. The tabs carry their counts so the
-          split reads before anything is clicked. */}
+      {/* One row: title, tabs, then the view. The pagination below already
+          states how many rows the selected tab holds. */}
       <div className="flex items-stretch gap-6 border-b border-line px-5">
         <h1 className="flex items-center text-[17px] font-semibold text-ink">Patches</h1>
 
@@ -111,14 +111,11 @@ export function PatchesPage({ tab, onTab, onOpen }: {
           <button
             key={t.key}
             onClick={() => onTab(t.key)}
-            className={`-mb-px flex items-center gap-2 border-b-2 py-3 text-[13px] font-medium transition-colors ${
+            className={`-mb-px flex items-center border-b-2 py-3 text-[13px] font-medium transition-colors ${
               tab === t.key ? 'border-ink text-ink' : 'border-transparent text-label hover:text-ink'
             }`}
           >
             {t.label}
-            <span className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-              tab === t.key ? 'bg-ink text-white' : 'bg-chip text-label'
-            }`}>{t.count}</span>
           </button>
         ))}
 
