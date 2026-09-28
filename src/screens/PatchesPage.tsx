@@ -29,8 +29,8 @@ const eosDate = (d: string) => {
 
 const shortDate = (d: string) => d.replace(/^[A-Za-z]{3}, /, '').replace(/ \d{2}:\d{2} [AP]M$/, '');
 
-export function PatchesPage({ tab, onTab, onOpen }: {
-  tab: PatchTab; onTab: (t: PatchTab) => void; onOpen: (id: string) => void;
+export function PatchesPage({ tab, onOpen }: {
+  tab: PatchTab; onOpen: (id: string) => void;
 }) {
   const [q, setQ] = useState('');
   const isUpgrades = tab === 'os-upgrades';
@@ -95,29 +95,15 @@ export function PatchesPage({ tab, onTab, onOpen }: {
     </button>
   );
 
-  const TABS: { key: PatchTab; label: string }[] = [
-    { key: 'patches', label: 'Software Patches' },
-    { key: 'os-upgrades', label: 'OS Upgrades' },
-  ];
-
   return (
     <div className="flex h-full flex-col">
-      {/* One row: title, tabs, then the view. The pagination below already
-          states how many rows the selected tab holds. */}
+      {/* Software Patches and OS Upgrades are two entries in the Patch sidebar,
+          so each is its own page carrying its own title. The switch happens in
+          the nav, and the page does not restate it as a tab. */}
       <div className="flex items-stretch gap-6 border-b border-line px-5">
-        <h1 className="flex items-center text-[17px] font-semibold text-ink">Patches</h1>
-
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => onTab(t.key)}
-            className={`-mb-px flex items-center border-b-2 py-3 text-[13px] font-medium transition-colors ${
-              tab === t.key ? 'border-ink text-ink' : 'border-transparent text-label hover:text-ink'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        <h1 className="flex items-center text-[17px] font-semibold text-ink">
+          {isUpgrades ? 'OS Upgrades' : 'Software Patches'}
+        </h1>
 
         {/* No view control on OS Upgrades — one set, nothing to pick between. */}
         {!isUpgrades && (

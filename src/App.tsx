@@ -77,11 +77,14 @@ const format = (r: Route): string => {
   }
 };
 
-/** Which patch sub-page the sidebar flyout should mark as current. */
+/* Which sidebar entry the flyout should mark as current. Software Patches and
+ * OS Upgrades are separate entries now, so the two patch tabs resolve to
+ * different values — collapsing them would leave the marker on the wrong row. */
 const moduleOf = (r: Route) =>
   r.page === 'dashboard' ? 'dashboard'
   : r.page === 'endpoints' || r.page === 'endpoint' ? 'endpoints'
   : r.page.startsWith('deployment') ? 'deployments'
+  : r.page === 'upgrade' || (r.page === 'patches' && r.tab === 'os-upgrades') ? 'os-upgrades'
   : 'patches';
 
 export function App() {
@@ -108,6 +111,7 @@ export function App() {
     go(page === 'dashboard' ? { page: 'dashboard' }
       : page === 'endpoints' ? { page: 'endpoints' }
       : page === 'deployments' ? { page: 'deployments' }
+      : page === 'os-upgrades' ? { page: 'patches', tab: 'os-upgrades' }
       : { page: 'patches', tab: 'patches' });
 
   return (
@@ -130,7 +134,6 @@ export function App() {
       {route.page === 'patches' && (
         <PatchesPage
           tab={route.tab}
-          onTab={(t) => go({ page: 'patches', tab: t })}
           onOpen={(id) => go({ page: 'upgrade', id })}
         />
       )}

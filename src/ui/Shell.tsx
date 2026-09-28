@@ -3,7 +3,7 @@ import {
   PanelLeft, Sparkles, Plus, Type, Calendar, MessagesSquare, Bell, History,
   Settings, Keyboard, Info, Gauge, Ticket, Users, GitCompareArrows, Share2,
   Monitor, Database, ShieldCheck, Layers, Cog, Box, Network, Lightbulb,
-  FileBarChart, UserCheck, ListChecks, UsersRound, Rocket, ClipboardCheck,
+  FileBarChart, UserCheck, ListChecks, UsersRound, Rocket, ClipboardCheck, MonitorUp,
 } from 'lucide-react';
 
 /* The product shell: a narrow icon rail on the left, a white top bar, and the
@@ -55,7 +55,8 @@ const MODULES: Record<string, { label: string; items: NavItem[] }> = {
   patch: {
     label: 'Patch',
     items: [
-      { icon: Cog, label: 'Patches', page: 'patches' },
+      { icon: Cog, label: 'Software Patches', page: 'patches' },
+      { icon: MonitorUp, label: 'OS Upgrades', page: 'os-upgrades' },
       { icon: Rocket, label: 'Patch Deployment', page: 'deployments' },
       { icon: Monitor, label: 'Endpoint', page: 'endpoints' },
       { icon: ClipboardCheck, label: 'Automatic Patch Test' },
