@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shell } from './ui/Shell';
+import { Dashboard } from './screens/Dashboard';
 import { PatchesPage, type PatchTab } from './screens/PatchesPage';
 import { OsUpgradeDetail } from './screens/OsUpgradeDetail';
 import { EndpointsList } from './screens/EndpointsList';
@@ -22,45 +23,64 @@ import { DeploymentDetail } from './screens/DeploymentDetail';
  *   #/deployments/PDR-2041     one run
  */
 
+/* A dashboard widget drills into a listing WITH a filter already applied, so the
+ * filter travels in the hash: the destination is a link the reader can bookmark
+ * or send to whoever has to fix it, not a screen they arrive at and re-filter. */
 type Route =
+  | { page: 'dashboard' }
   | { page: 'patches'; tab: PatchTab }
-  | { page: 'upgrade'; id: string }
-  | { page: 'endpoints' }
+  | { page: 'upgrade'; id: string; tab?: string; bucket?: string; q?: string }
+  | { page: 'endpoints'; os?: string }
   | { page: 'endpoint'; id: string }
-  | { page: 'deployments' }
+  | { page: 'deployments'; filter?: string }
   | { page: 'deployment-new' }
   | { page: 'deployment'; id: string };
 
 function parse(hash: string): Route {
-  const [a, b] = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  if (a === 'endpoints') return b ? { page: 'endpoint', id: b } : { page: 'endpoints' };
+  const [path, qs] = hash.replace(/^#\/?/, '').split('?');
+  const p = new URLSearchParams(qs ?? '');
+  const [a, b] = path.split('/').filter(Boolean);
+  if (a === 'dashboard') return { page: 'dashboard' };
+  if (a === 'endpoints') return b ? { page: 'endpoint', id: b } : { page: 'endpoints', os: p.get('os') ?? undefined };
   if (a === 'deployments') {
     if (b === 'new') return { page: 'deployment-new' };
-    return b ? { page: 'deployment', id: b } : { page: 'deployments' };
+    return b ? { page: 'deployment', id: b } : { page: 'deployments', filter: p.get('filter') ?? undefined };
   }
   if (a === 'patches') {
     if (!b) return { page: 'patches', tab: 'patches' };
     if (b === 'os-upgrades') return { page: 'patches', tab: 'os-upgrades' };
-    return { page: 'upgrade', id: b };
+    return {
+      page: 'upgrade', id: b,
+      tab: p.get('tab') ?? undefined, bucket: p.get('bucket') ?? undefined, q: p.get('q') ?? undefined,
+    };
   }
   return { page: 'patches', tab: 'os-upgrades' };
 }
 
+const query = (pairs: Record<string, string | undefined>) => {
+  const p = new URLSearchParams();
+  Object.entries(pairs).forEach(([k, v]) => { if (v) p.set(k, v); });
+  const s = p.toString();
+  return s ? `?${s}` : '';
+};
+
 const format = (r: Route): string => {
   switch (r.page) {
-    case 'endpoints': return '#/endpoints';
+    case 'dashboard': return '#/dashboard';
+    case 'endpoints': return `#/endpoints${query({ os: r.os })}`;
     case 'endpoint': return `#/endpoints/${r.id}`;
-    case 'deployments': return '#/deployments';
+    case 'deployments': return `#/deployments${query({ filter: r.filter })}`;
     case 'deployment-new': return '#/deployments/new';
     case 'deployment': return `#/deployments/${r.id}`;
-    case 'upgrade': return `#/patches/${r.id}`;
+    case 'upgrade': return `#/patches/${r.id}${query({ tab: r.tab, bucket: r.bucket, q: r.q })}`;
     default: return r.tab === 'os-upgrades' ? '#/patches/os-upgrades' : '#/patches';
   }
 };
 
 /** Which patch sub-page the sidebar flyout should mark as current. */
 const moduleOf = (r: Route) =>
-  r.page === 'endpoints' || r.page === 'endpoint' ? 'endpoints'
+  r.page === 'dashboard' ? 'dashboard'
+  : r.page === 'endpoints' || r.page === 'endpoint' ? 'endpoints'
   : r.page.startsWith('deployment') ? 'deployments'
   : 'patches';
 
@@ -85,12 +105,28 @@ export function App() {
   };
 
   const navigate = (page: string) =>
-    go(page === 'endpoints' ? { page: 'endpoints' }
+    go(page === 'dashboard' ? { page: 'dashboard' }
+      : page === 'endpoints' ? { page: 'endpoints' }
       : page === 'deployments' ? { page: 'deployments' }
       : { page: 'patches', tab: 'patches' });
 
   return (
     <Shell page={moduleOf(route)} onNavigate={navigate}>
+      {route.page === 'dashboard' && (
+        <Dashboard
+          onOpenDeployments={(active) => go({ page: 'deployments', filter: active ? 'active' : undefined })}
+          onOpenEndpoints={(os) => go({ page: 'endpoints', os })}
+          onOpenCompatibility={(id, filter) => go(
+            !filter ? { page: 'upgrade', id, tab: 'endpoint' }
+              : filter === 'Compatible' || filter === 'Incompatible'
+              ? { page: 'upgrade', id, tab: 'endpoint', bucket: filter }
+              // Anything else is a prerequisite name, which narrows the
+              // Incompatible bucket rather than replacing it.
+              : { page: 'upgrade', id, tab: 'endpoint', bucket: 'Incompatible', q: filter },
+          )}
+        />
+      )}
+
       {route.page === 'patches' && (
         <PatchesPage
           tab={route.tab}
@@ -101,13 +137,21 @@ export function App() {
 
       {route.page === 'upgrade' && (
         <OsUpgradeDetail
+          /* The key re-seeds the tab, bucket and search when a second
+             drill-through lands on the page already showing the first. */
+          key={`${route.id}|${route.tab ?? ''}|${route.bucket ?? ''}|${route.q ?? ''}`}
           id={route.id}
+          initialTab={route.tab}
+          initialBucket={route.bucket}
+          initialQuery={route.q}
           onBack={() => go({ page: 'patches', tab: 'os-upgrades' })}
           onOpenRun={(runId) => go({ page: 'deployment', id: runId })}
         />
       )}
 
-      {route.page === 'endpoints' && <EndpointsList onOpen={(id) => go({ page: 'endpoint', id })} />}
+      {route.page === 'endpoints' && (
+        <EndpointsList key={route.os ?? ''} osFilter={route.os} onOpen={(id) => go({ page: 'endpoint', id })} />
+      )}
 
       {route.page === 'endpoint' && (
         <EndpointDetail
@@ -118,6 +162,8 @@ export function App() {
 
       {route.page === 'deployments' && (
         <DeploymentsList
+          key={route.filter ?? ''}
+          initialFilter={route.filter}
           onOpen={(id) => go({ page: 'deployment', id })}
           onCreate={() => go({ page: 'deployment-new' })}
         />

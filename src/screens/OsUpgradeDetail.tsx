@@ -7,7 +7,7 @@ import {
 import { DataTable, Pagination, SearchBar, SideNav, IdPill, type Column } from '../ui/Table';
 import { InstallationTab } from '../ui/InstallationTab';
 import { installRowsFor } from '../data/install';
-import { byId, endpointsFor, type ScopedEndpoint } from '../data/osUpgrade';
+import { byId, eligibleFor, countsFor, type Evaluated } from '../data/osUpgrade';
 
 /* OS Upgrade detail.
  *
@@ -25,34 +25,41 @@ const TABS: TabDef[] = [
   { id: 'audit', label: 'Audit Trail', icon: ScrollText },
 ];
 
-export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
+export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBucket, initialQuery }: {
   id: string; onBack: () => void; onOpenRun: (runId: string) => void;
+  /* Set when a dashboard widget drilled in: the page opens on the tab, bucket
+   * and search term the widget was pointing at. */
+  initialTab?: string; initialBucket?: string; initialQuery?: string;
 }) {
   const u = byId(id);
-  const [tab, setTab] = useState('overview');
-  const [bucket, setBucket] = useState<'Compatible' | 'Incompatible'>('Compatible');
-  const [q, setQ] = useState('');
+  const [tab, setTab] = useState(initialTab && TABS.some((t) => t.id === initialTab) ? initialTab : 'overview');
+  const [bucket, setBucket] = useState<string>(initialBucket ?? 'Compatible');
+  const [q, setQ] = useState(initialQuery ?? '');
   const [approval, setApproval] = useState(u.approval);
 
-  const fleet = endpointsFor(u);
+  const fleet = eligibleFor(u);
+  const c = countsFor(u);
   const query = q.trim().toLowerCase();
-  const rows = fleet.filter((e) => e.status === bucket).filter((e) =>
-    !query || e.id.toLowerCase().includes(query) || e.hostName.toLowerCase().includes(query) ||
-    e.ip.includes(query) || e.currentOs.toLowerCase().includes(query) || e.reason.toLowerCase().includes(query));
+  const rows = fleet.filter((r) => r.verdict === bucket).filter((r) =>
+    !query || r.endpoint.id.toLowerCase().includes(query) || r.endpoint.hostName.toLowerCase().includes(query) ||
+    r.endpoint.ip.includes(query) || r.reasons.join(' ').toLowerCase().includes(query));
 
-  const cols: Column<ScopedEndpoint>[] = [
-    { key: 'id', header: 'ID', cell: (e) => <IdPill>{e.id}</IdPill> },
-    { key: 'host', header: 'Host Name', cell: (e) => e.hostName },
-    { key: 'ip', header: 'IP Address', cell: (e) => e.ip },
-    { key: 'os', header: 'Current OS', cell: (e) => e.currentOs },
-    { key: 'agent', header: 'Agent Version', cell: (e) => e.agentVersion },
-    { key: 'arch', header: 'Architecture', cell: (e) => e.architecture },
-    { key: 'status', header: 'Compatibility Status', cell: (e) => (
-      <Dot color={e.status === 'Compatible' ? '#16A34A' : '#DC2626'}>
-        <span className={e.status === 'Compatible' ? 'text-ok' : 'text-risk'}>{e.status}</span>
+  const VERDICT_COLOR: Record<string, string> = {
+    Compatible: '#0D9488', Incompatible: '#E11D48', 'Not scanned': '#D97706',
+  };
+  const cols: Column<Evaluated>[] = [
+    { key: 'id', header: 'ID', cell: (r) => <IdPill>{r.endpoint.id}</IdPill> },
+    { key: 'host', header: 'Host Name', cell: (r) => r.endpoint.hostName },
+    { key: 'ip', header: 'IP Address', cell: (r) => r.endpoint.ip },
+    { key: 'os', header: 'Current OS', cell: (r) => `${r.endpoint.family} ${r.endpoint.release}` },
+    { key: 'agent', header: 'Agent Version', cell: (r) => r.endpoint.agentVersion },
+    { key: 'arch', header: 'Architecture', cell: (r) => r.endpoint.architecture },
+    { key: 'status', header: 'Compatibility Status', cell: (r) => (
+      <Dot color={VERDICT_COLOR[r.verdict] ?? '#8B93A1'}>
+        <span style={{ color: VERDICT_COLOR[r.verdict] ?? '#8B93A1' }}>{r.verdict}</span>
       </Dot>
     ) },
-    { key: 'reason', header: 'Reason', cell: (e) => e.reason ? <span className="text-risk">{e.reason}</span> : <Dash /> },
+    { key: 'reason', header: 'Reason', cell: (r) => r.reasons.length ? <span className="text-risk">{r.reasons.join(' · ')}</span> : <Dash /> },
   ];
 
   return (
@@ -71,9 +78,9 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
         <KeyFields
           fields={[
             { label: 'Patch Category', value: 'OS Upgrade' },
-            { label: 'Platform', value: u.platform },
+            { label: 'Upgrades to', value: u.family },
             { label: 'Approval Status', value: (
-              <Dot color={approval === 'Approved' ? '#16A34A' : '#D97706'}>
+              <Dot color={approval === 'Approved' ? '#0D9488' : '#D97706'}>
                 <span className={approval === 'Approved' ? 'text-ok' : 'text-warn'}>{approval}</span>
               </Dot>
             ) },
@@ -103,11 +110,11 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
               {/* Endpoints counts the two COMPATIBILITY states, not patch buckets —
                   a machine is eligible for an operating system or ruled out of it. */}
               <OverviewCard
-                icon={Monitor} label="Endpoints" total={u.compatible + u.incompatible}
+                icon={Monitor} label="Endpoints" total={c.compatible + c.incompatible}
                 onOpen={() => setTab('endpoint')}
                 legend={[
-                  { label: 'Compatible', value: u.compatible, color: '#16A34A' },
-                  { label: 'Incompatible', value: u.incompatible, color: '#DC2626' },
+                  { label: 'Compatible', value: c.compatible, color: '#0D9488' },
+                  { label: 'Incompatible', value: c.incompatible, color: '#E11D48' },
                 ]}
               />
               <OverviewCard
@@ -115,8 +122,8 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
                 onOpen={() => setTab('deployment')}
                 legend={[
                   { label: 'In Progress', value: 1, color: '#D97706' },
-                  { label: 'Success', value: 0, color: '#16A34A' },
-                  { label: 'Failed', value: 0, color: '#DC2626' },
+                  { label: 'Success', value: 0, color: '#0D9488' },
+                  { label: 'Failed', value: 0, color: '#E11D48' },
                 ]}
               />
               {/* No Affected Products card: the image IS the product, so the card
@@ -143,23 +150,24 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
               items={[
                 { id: 'Compatible', label: 'Compatible' },
                 { id: 'Incompatible', label: 'Incompatible' },
+                { id: 'Not scanned', label: 'Not scanned' },
               ]}
               active={bucket}
-              onChange={(b) => setBucket(b as typeof bucket)}
+              onChange={setBucket}
             />
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="flex items-center gap-3 px-4 py-3">
                 <SearchBar value={q} onChange={setQ} />
                 {/* Machines already on the target build are in neither bucket —
                     counting them would overstate the outstanding work. */}
-                {u.onBuild > 0 && (
-                  <span className="whitespace-nowrap text-[12px] text-label">{u.onBuild} already on this build</span>
+                {c.onBuild > 0 && (
+                  <span className="whitespace-nowrap text-[12px] text-label">{c.onBuild} already on this build</span>
                 )}
                 <button className="flex h-9 flex-none items-center gap-1.5 rounded-md border border-line px-3 text-[12.5px] font-medium text-ink-soft hover:bg-strip">
                   <RefreshCw size={14} /> Refresh
                 </button>
               </div>
-              <DataTable columns={cols} rows={rows} rowKey={(e) => e.id} empty={`No ${bucket.toLowerCase()} endpoints found.`} />
+              <DataTable columns={cols} rows={rows} rowKey={(r) => r.endpoint.id} empty={`No ${bucket.toLowerCase()} endpoints found.`} />
               <Pagination total={rows.length} noun="items" />
             </div>
           </div>
@@ -194,8 +202,8 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun }: {
                   An endpoint must meet or exceed every value above before this upgrade is offered to it.
                 </p>
                 <span className="ml-auto text-[12px] text-label">
-                  Evaluated against <b className="font-semibold text-value">{u.compatible + u.incompatible}</b> endpoints ·{' '}
-                  <b className="font-semibold text-ok">{u.compatible} compatible</b>
+                  Evaluated against <b className="font-semibold text-value">{c.compatible + c.incompatible}</b> endpoints ·{' '}
+                  <b className="font-semibold text-ok">{c.compatible} compatible</b>
                 </span>
                 <button onClick={() => setTab('endpoint')} className="text-[12px] font-medium text-link hover:underline">
                   View endpoints ›

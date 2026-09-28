@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History } from 'lucide-react';
 import { DataTable, Pagination, SearchBar, IdPill, type Column } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
-import { OS_UPGRADES, type OsUpgrade } from '../data/osUpgrade';
+import { OS_UPGRADES, countsFor, type OsUpgrade } from '../data/osUpgrade';
 import { PATCHES, type Patch } from '../data/patches';
 
 /* The Patches page — the same two-tab architecture the working prototype has.
@@ -55,17 +55,20 @@ export function PatchesPage({ tab, onTab, onOpen }: {
     { key: 'eos', header: 'End of Support', cell: (u) => eosDate(u.eosDate) },
     /* Compatibility takes the slot Severity has on the patch grid — an image
        carries no CVSS rating, and this is the number a technician ranks by. */
-    { key: 'compat', header: 'Compatibility', cell: (u) => (
-      <span className="flex items-center gap-2.5 whitespace-nowrap">
-        <Dot color="#16A34A"><span className="font-semibold text-ok">{u.compatible}</span></Dot>
-        <Dot color={u.incompatible ? '#DC2626' : '#CBD5E1'}>
-          <span className={u.incompatible ? 'font-semibold text-risk' : 'text-label'}>{u.incompatible}</span>
-        </Dot>
-      </span>
-    ) },
-    { key: 'installed', header: 'Installed System', cell: (u) => u.onBuild || <Dash /> },
+    { key: 'compat', header: 'Compatibility', cell: (u) => {
+      const c = countsFor(u);
+      return (
+        <span className="flex items-center gap-2.5 whitespace-nowrap">
+          <Dot color="#0D9488"><span className="font-semibold text-ok">{c.compatible}</span></Dot>
+          <Dot color={c.incompatible ? '#E11D48' : '#CBD5E1'}>
+            <span className={c.incompatible ? 'font-semibold text-risk' : 'text-label'}>{c.incompatible}</span>
+          </Dot>
+        </span>
+      );
+    } },
+    { key: 'installed', header: 'Installed System', cell: (u) => countsFor(u).onBuild || <Dash /> },
     { key: 'approval', header: 'Approval Status', cell: (u) => (
-      <Dot color={u.approval === 'Approved' ? '#16A34A' : '#D97706'}>
+      <Dot color={u.approval === 'Approved' ? '#0D9488' : '#D97706'}>
         <span className={u.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{u.approval}</span>
       </Dot>
     ) },
@@ -80,7 +83,7 @@ export function PatchesPage({ tab, onTab, onOpen }: {
     { key: 'installed', header: 'Installed System', cell: (p) => p.installed ?? <Dash /> },
     { key: 'reboot', header: 'Reboot Required', cell: (p) => p.reboot },
     { key: 'approval', header: 'Approval Status', cell: (p) => (
-      <Dot color={p.approval === 'Approved' ? '#16A34A' : '#D97706'}>
+      <Dot color={p.approval === 'Approved' ? '#0D9488' : '#D97706'}>
         <span className={p.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{p.approval}</span>
       </Dot>
     ) },

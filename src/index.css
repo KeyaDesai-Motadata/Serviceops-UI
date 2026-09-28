@@ -17,12 +17,20 @@
   --color-strip:      #F6F7F9;
   --color-chip:       #EEF1F5;
   --color-link:       #2563EB;
-  --color-ok:         #16A34A;
-  --color-ok-soft:    #E8F6ED;
-  --color-risk:       #DC2626;
-  --color-risk-soft:  #FDECEC;
+  /* ⚠️ Status hues are VALIDATED, not chosen by eye. The obvious green/red pair
+   * (#16A34A / #DC2626) separates at only ΔE 5.0 for deuteranopia — the two most
+   * important states on this product were near-identical to a red-green colour
+   * blind reader wherever they sat as adjacent fills in a stacked bar. Teal and
+   * rose clear it at ΔE 9.4 and all three pass the contrast floor.
+   * Re-run before changing: scripts/validate_palette.js "#0D9488,#E11D48,#D97706" */
+  --color-ok:         #0D9488;
+  --color-ok-soft:    #E3F4F2;
+  --color-risk:       #E11D48;
+  --color-risk-soft:  #FDE9EE;
   --color-warn:       #D97706;
   --color-warn-soft:  #FEF3E2;
+  /* Not a series colour — the "absent / not applicable" fill. Always direct-labelled. */
+  --color-none:       #8B93A1;
 }
 
 html, body, #root { height: 100%; }

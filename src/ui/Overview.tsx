@@ -12,10 +12,10 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 export interface StatusSplit { success: number; failed: number; inProgress: number; other: number; }
 
 export const BREAKDOWN_STATUSES = [
-  { key: 'success' as const, label: 'Success', color: '#16A34A' },
-  { key: 'failed' as const, label: 'Failed', color: '#DC2626' },
+  { key: 'success' as const, label: 'Success', color: '#0D9488' },
+  { key: 'failed' as const, label: 'Failed', color: '#E11D48' },
   { key: 'inProgress' as const, label: 'In Progress', color: '#D97706' },
-  { key: 'other' as const, label: 'Other', color: '#94A3B8' },
+  { key: 'other' as const, label: 'Other', color: '#8B93A1' },
 ];
 
 /** Count block beside the first three records — the Overview's top row. */
@@ -68,7 +68,7 @@ export function CountListCard({ label, icon: Icon, total, caption, items, onClic
 export const StatCard = ({ label, value, color }: { label: string; value: number; color: string }) => (
   <div className="flex h-full flex-col justify-center rounded-lg border border-line px-4 py-3">
     <div className="text-[12.5px] text-label">{label}</div>
-    <div className="mt-1 text-[22px] font-semibold tabular-nums" style={{ color: value > 0 ? color : '#94A3B8' }}>{value}</div>
+    <div className="mt-1 text-[22px] font-semibold tabular-nums" style={{ color: value > 0 ? color : '#8B93A1' }}>{value}</div>
   </div>
 );
 
@@ -143,7 +143,7 @@ export function StatusBreakdownCard({ title, icon: Icon, data, totalLabel, allLa
               <span className="size-2 flex-none rounded-full" style={{ background: s.color }} />
               {s.label}
             </span>
-            <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: d[s.key] > 0 ? s.color : '#94A3B8' }}>
+            <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: d[s.key] > 0 ? s.color : '#8B93A1' }}>
               {d[s.key]}
             </span>
           </div>

@@ -10,16 +10,24 @@ import { DEPLOYMENTS, type Deployment } from '../data/deployment';
  * — a run's Deployment Category is what the view filters on, which is why that
  * column leads the record rather than sitting among the details. */
 
+/* An OS Upgrade run is ACTIVE while any endpoint is still moving — ready to
+ * deploy, downloading, downloaded or in progress. A run whose header reads
+ * Completed is finished, so it is not in this view even if a retry is pending. */
+const ACTIVE = ['Ready to deploy', 'Ready to Deploy', 'Downloading', 'Downloaded', 'In Progress'];
+
 const VIEWS = [
   { id: 'all', label: 'All Deployments', match: () => true },
   { id: 'os-upgrade', label: 'OS Upgrade Deployments', match: (d: Deployment) => d.category === 'OS Upgrade' },
+  { id: 'active', label: 'Active OS Upgrade Deployments', match: (d: Deployment) => d.category === 'OS Upgrade' && ACTIVE.includes(d.status) },
   { id: 'pending', label: 'Pending', match: (d: Deployment) => d.status !== 'Completed' },
   { id: 'draft', label: 'Draft', match: (d: Deployment) => d.status === 'Draft' },
 ];
 
-export function DeploymentsList({ onOpen, onCreate }: { onOpen: (id: string) => void; onCreate: () => void }) {
+export function DeploymentsList({ onOpen, onCreate, initialFilter }: {
+  onOpen: (id: string) => void; onCreate: () => void; initialFilter?: string;
+}) {
   const [q, setQ] = useState('');
-  const [view, setView] = useState(VIEWS[1]);
+  const [view, setView] = useState(() => VIEWS.find((v) => v.id === initialFilter) ?? VIEWS[1]);
   const [menu, setMenu] = useState(false);
 
   const query = q.trim().toLowerCase();

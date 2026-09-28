@@ -17,8 +17,8 @@ export interface InstallRow {
 }
 
 const STATUS: Record<string, string> = {
-  Success: '#16A34A', Installed: '#16A34A', Failed: '#DC2626',
-  'In Progress': '#D97706', Pending: '#D97706', 'Not Ready': '#64748B', 'Yet to Receive': '#94A3B8',
+  Success: '#0D9488', Installed: '#0D9488', Failed: '#E11D48',
+  'In Progress': '#D97706', Pending: '#D97706', 'Not Ready': '#64748B', 'Yet to Receive': '#8B93A1',
 };
 
 export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload }: {
@@ -42,7 +42,7 @@ export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload
   const patchCols: Column<InstallRow>[] = [
     { key: 'id', header: 'Endpoint ID', cell: (r) => (
       <span className="flex items-center gap-2">
-        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#16A34A' : '#EAB308' }} />
+        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#0D9488' : '#EAB308' }} />
         <IdPill>{r.id}</IdPill>
       </span>
     ) },
@@ -77,7 +77,7 @@ export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload
   const recordCols: Column<InstallRow>[] = [
     { key: 'id', header: 'Endpoint ID', cell: (r) => (
       <span className="flex items-center gap-2">
-        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#16A34A' : '#EAB308' }} />
+        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#0D9488' : '#EAB308' }} />
         <IdPill>{r.id}</IdPill>
       </span>
     ) },

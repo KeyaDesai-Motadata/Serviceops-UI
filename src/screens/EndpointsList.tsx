@@ -1,41 +1,40 @@
 import { useState } from 'react';
-import { Download, RefreshCw, Columns3, FileText, ChevronDown } from 'lucide-react';
+import { Download, RefreshCw, Columns3, FileText, ChevronDown, X } from 'lucide-react';
 import { DataTable, Pagination, SearchBar, IdPill, type Column } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
+import { FLEET, osNameOf, type Endpoint } from '../data/fleet';
+import { lifecycleOf } from '../data/dashboard';
 
 /* Endpoints listing — the page the endpoint detail opens from, as in the
  * product. Columns are the product's own. */
 
-export interface EndpointRow {
-  id: string; hostName: string; ip: string; osName: string; version: string | null;
-  servicePack: string; architecture: string; remoteOffice: string;
-  health: 'Healthy' | 'Warning' | 'Critical' | null; tags: string[]; reboot: 'Yes' | 'No';
-  online: boolean;
-}
+/* The listing reads THE fleet. There is no second endpoint list. */
+export type EndpointRow = Endpoint;
+export const ENDPOINTS = FLEET;
 
-export const ENDPOINTS: EndpointRow[] = [
-  { id: 'EP-16', hostName: 'harsh-patil-Precision-5560', ip: '10.20.40.51', osName: 'Ubuntu 24.04', version: '24.04.5 LTS', servicePack: '7.0.0-31-generic', architecture: '64 BIT', remoteOffice: '12th floor left', health: 'Healthy', tags: [], reboot: 'No', online: true },
-  { id: 'EP-408', hostName: 'FIN-LT-0188', ip: '10.20.22.188', osName: 'Microsoft Windows 11 Pro', version: '10.0.26200.8328', servicePack: 'None', architecture: '64 BIT', remoteOffice: 'Mumbai Office', health: 'Healthy', tags: ['finance'], reboot: 'No', online: true },
-  { id: 'EP-406', hostName: 'SAL-LT-0204', ip: '10.20.23.204', osName: 'Microsoft Windows 10 Enterprise', version: '10.0.19045.6466', servicePack: 'None', architecture: '64 BIT', remoteOffice: 'Bengaluru Campus', health: 'Healthy', tags: [], reboot: 'No', online: true },
-  { id: 'EP-400', hostName: 'ENG-LT-0312', ip: '10.20.19.112', osName: 'Microsoft Windows 11 Pro', version: '10.0.26200.8655', servicePack: 'None', architecture: '64 BIT', remoteOffice: 'Hyderabad Office', health: 'Healthy', tags: [], reboot: 'Yes', online: true },
-  { id: 'EP-396', hostName: 'DESKTOP-A19KJ', ip: '10.20.41.40', osName: 'Microsoft Windows 10 Pro', version: null, servicePack: 'None', architecture: '64 BIT', remoteOffice: 'Mumbai Office', health: null, tags: [], reboot: 'No', online: false },
-  { id: 'EP-352', hostName: 'DC1-APP-01', ip: '10.20.40.21', osName: 'Microsoft Windows Server 2019 Datacenter', version: '10.0.17763.6893', servicePack: 'None', architecture: '64 BIT', remoteOffice: 'Ahmedabad HQ', health: 'Healthy', tags: ['server'], reboot: 'No', online: true },
-  { id: 'EP-357', hostName: 'REC-DT-0023', ip: '10.20.21.23', osName: 'Microsoft Windows 10 Pro', version: '10.0.19045.5011', servicePack: 'None', architecture: '64 BIT', remoteOffice: 'Muscat Office', health: 'Critical', tags: ['kiosk'], reboot: 'Yes', online: false },
-];
+const HEALTH: Record<string, string> = { Healthy: '#0D9488', Warning: '#D97706', Critical: '#E11D48' };
 
-const HEALTH: Record<string, string> = { Healthy: '#16A34A', Warning: '#D97706', Critical: '#DC2626' };
-
-export function EndpointsList({ onOpen }: { onOpen: (id: string) => void }) {
+export function EndpointsList({ onOpen, osFilter }: { onOpen: (id: string) => void; osFilter?: string }) {
   const [q, setQ] = useState('');
+  /* Arrived from a dashboard widget: the filter it named is pinned as a
+   * removable chip, so the reader can see why the list is short and why the
+   * count matches the number they clicked. `eol` is every end-of-support
+   * version at once — the EOL KPI's own population. */
+  const [os, setOs] = useState(osFilter);
+  const eolOnly = os === 'eol';
   const query = q.trim().toLowerCase();
-  const rows = ENDPOINTS.filter((e) =>
+  const rows = ENDPOINTS
+    .filter((e) => !os || (eolOnly
+      ? lifecycleOf(e.family, e.release) === 'End of support'
+      : `${e.family} ${e.release}` === os))
+    .filter((e) =>
     !query || e.id.toLowerCase().includes(query) || e.hostName.toLowerCase().includes(query) ||
-    e.ip.includes(query) || e.osName.toLowerCase().includes(query) || e.remoteOffice.toLowerCase().includes(query));
+    e.ip.includes(query) || osNameOf(e).toLowerCase().includes(query) || e.remoteOffice.toLowerCase().includes(query));
 
   const cols: Column<EndpointRow>[] = [
     { key: 'id', header: 'Agent ID', cell: (e) => (
       <button onClick={() => onOpen(e.id)} className="flex items-center gap-2">
-        <span className="size-2 flex-none rounded-full" style={{ background: e.online ? '#16A34A' : '#EAB308' }} />
+        <span className="size-2 flex-none rounded-full" style={{ background: e.online ? '#0D9488' : '#EAB308' }} />
         <IdPill>{e.id}</IdPill>
       </button>
     ) },
@@ -43,9 +42,9 @@ export function EndpointsList({ onOpen }: { onOpen: (id: string) => void }) {
       <button onClick={() => onOpen(e.id)} className="text-left hover:text-link">{e.hostName}</button>
     ) },
     { key: 'ip', header: 'IP Address', cell: (e) => e.ip },
-    { key: 'os', header: 'OS Name', cell: (e) => e.osName },
-    { key: 'ver', header: 'Version', cell: (e) => e.version ?? <Dash /> },
-    { key: 'sp', header: 'Service Pack', cell: (e) => e.servicePack },
+    { key: 'os', header: 'OS Name', cell: (e) => osNameOf(e) },
+    { key: 'ver', header: 'Version', cell: (e) => `${e.release} (${e.build})` },
+    { key: 'sp', header: 'Service Pack', cell: (e) => 'None' },
     { key: 'arch', header: 'Architecture', cell: (e) => e.architecture },
     { key: 'office', header: 'Remote Office', cell: (e) => e.remoteOffice },
     { key: 'health', header: 'System Health', cell: (e) => e.health
@@ -78,7 +77,16 @@ export function EndpointsList({ onOpen }: { onOpen: (id: string) => void }) {
         </div>
       </div>
 
-      <div className="px-5 py-3"><SearchBar value={q} onChange={setQ} /></div>
+      <div className="flex items-center gap-3 px-5 py-3">
+        <SearchBar value={q} onChange={setQ} />
+        {os && (
+          <span className="flex flex-none items-center gap-1.5 rounded-md border border-line bg-strip px-2.5 py-1.5 text-[12px] text-value">
+            <span className="text-label">{eolOnly ? 'OS Lifecycle:' : 'OS Version:'}</span>
+            {eolOnly ? 'End of Life / End of Extended Support' : os}
+            <button onClick={() => setOs(undefined)} title="Clear this filter" className="text-label hover:text-ink"><X size={13} /></button>
+          </span>
+        )}
+      </div>
       <DataTable columns={cols} rows={rows} rowKey={(e) => e.id} empty="No endpoints found." />
       <Pagination total={rows.length} noun="items" />
     </div>

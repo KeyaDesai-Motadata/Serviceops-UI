@@ -11,7 +11,7 @@ import {
  * screen in here is built inside it rather than inventing its own frame. */
 
 const RAIL = [
-  { icon: Gauge, title: 'Dashboard' },
+  { icon: Gauge, title: 'Dashboard', module: 'dashboard' },
   { icon: Ticket, title: 'Request' },
   { icon: Users, title: 'Users' },
   { icon: GitCompareArrows, title: 'Change' },
@@ -20,7 +20,7 @@ const RAIL = [
   { icon: Database, title: 'CMDB' },
   { icon: ShieldCheck, title: 'Vulnerability' },
   { icon: Layers, title: 'BOM' },
-  { icon: Cog, title: 'Patch', active: true },
+  { icon: Cog, title: 'Patch', module: 'patch' },
   { icon: Box, title: 'Packages' },
   { icon: Network, title: 'Topology' },
   { icon: Lightbulb, title: 'Knowledge' },
@@ -32,16 +32,37 @@ const RAIL = [
 
 const TOP_ICONS = [Type, Calendar, MessagesSquare, Bell, History, Settings, Keyboard, Info];
 
-/* The Patch module's sub-pages, as the product's sidebar lists them. Hovering
- * the rail icon opens the flyout; this is the only way into the three pages,
- * because that is how the product works. */
-const PATCH_ITEMS: { icon: typeof Cog; label: string; page?: string }[] = [
-  { icon: Cog, label: 'Patches', page: 'patches' },
-  { icon: Rocket, label: 'Patch Deployment', page: 'deployments' },
-  { icon: Monitor, label: 'Endpoint', page: 'endpoints' },
-  { icon: ClipboardCheck, label: 'Automatic Patch Test' },
-  { icon: Settings, label: 'Automatic Patch Deployment' },
-];
+/* A module's sub-pages, as the product's sidebar lists them. Hovering the rail
+ * icon opens the flyout; this is the only way into the pages, because that is
+ * how the product works.
+ *
+ * The OS Upgrade Dashboard lives under DASHBOARD, not under Patch. A dashboard
+ * is read by people who never open the Patch module — service managers, asset
+ * owners — so it belongs beside the other dashboards rather than behind the
+ * module whose data it happens to summarise. */
+interface NavItem { icon: typeof Cog; label: string; page?: string }
+
+const MODULES: Record<string, { label: string; items: NavItem[] }> = {
+  dashboard: {
+    label: 'Dashboard',
+    items: [
+      { icon: Gauge, label: 'Patch Dashboard' },
+      { icon: Gauge, label: 'OS Upgrade Dashboard', page: 'dashboard' },
+      { icon: ShieldCheck, label: 'Vulnerability Dashboard' },
+      { icon: Monitor, label: 'Asset Dashboard' },
+    ],
+  },
+  patch: {
+    label: 'Patch',
+    items: [
+      { icon: Cog, label: 'Patches', page: 'patches' },
+      { icon: Rocket, label: 'Patch Deployment', page: 'deployments' },
+      { icon: Monitor, label: 'Endpoint', page: 'endpoints' },
+      { icon: ClipboardCheck, label: 'Automatic Patch Test' },
+      { icon: Settings, label: 'Automatic Patch Deployment' },
+    ],
+  },
+};
 
 export function Shell({ children, page, onNavigate }: {
   children: ReactNode;
@@ -49,33 +70,44 @@ export function Shell({ children, page, onNavigate }: {
   page?: string;
   onNavigate?: (page: string) => void;
 }) {
-  const [flyout, setFlyout] = useState(false);
+  /* Which rail module's flyout is open, and which one owns the current page. */
+  const [flyout, setFlyout] = useState<string | null>(null);
+  const current = page === 'dashboard' ? 'dashboard' : 'patch';
 
   return (
     <div className="flex h-full bg-white">
       {/* Icon rail. The active module carries the same near-black fill the
           active tab pill does — one "selected" language across the product. */}
       <nav className="relative flex w-[52px] flex-none flex-col items-center gap-1 border-r border-line bg-white py-3">
-        {RAIL.map(({ icon: Icon, title, active }, i) => (
-          active ? (
+        {RAIL.map(({ icon: Icon, title, module }, i) => (
+          module ? (
             <div
               key={i}
               className="relative"
-              onMouseEnter={() => setFlyout(true)}
-              onMouseLeave={() => setFlyout(false)}
+              onMouseEnter={() => setFlyout(module)}
+              onMouseLeave={() => setFlyout(null)}
             >
-              <button className="flex size-9 items-center justify-center rounded-lg bg-ink text-white">
+              <button
+                title={title}
+                onClick={() => {
+                  const first = MODULES[module].items.find((it) => it.page);
+                  if (first?.page) onNavigate?.(first.page);
+                }}
+                className={`flex size-9 items-center justify-center rounded-lg transition-colors ${
+                  current === module ? 'bg-ink text-white' : 'text-ink-soft hover:bg-strip'
+                }`}
+              >
                 <Icon size={18} strokeWidth={1.7} />
               </button>
 
-              {flyout && (
+              {flyout === module && (
                 <div className="absolute left-full top-0 z-50 ml-1 w-[248px] rounded-lg border border-line bg-white py-1.5 shadow-lg">
-                  <div className="px-3 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wider text-label">Patch</div>
-                  {PATCH_ITEMS.map((it) => (
+                  <div className="px-3 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wider text-label">{MODULES[module].label}</div>
+                  {MODULES[module].items.map((it) => (
                     <button
                       key={it.label}
                       disabled={!it.page}
-                      onClick={() => { if (it.page) { onNavigate?.(it.page); setFlyout(false); } }}
+                      onClick={() => { if (it.page) { onNavigate?.(it.page); setFlyout(null); } }}
                       className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] transition-colors ${
                         !it.page ? 'cursor-default text-label/60'
                         : page === it.page ? 'bg-chip font-medium text-ink'

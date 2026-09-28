@@ -30,7 +30,7 @@ const STATUS_BY_REMOTE_OFFICE: Record<string, StatusSplit> = {
 };
 
 const STATUS_COLOR: Record<DeployedEndpoint['status'], string> = {
-  Success: '#16A34A', Failed: '#DC2626', 'In Progress': '#D97706', 'Yet to Receive': '#94A3B8',
+  Success: '#0D9488', Failed: '#E11D48', 'In Progress': '#D97706', 'Yet to Receive': '#8B93A1',
 };
 
 export function DeploymentDetail({ id, onBack, onOpenUpgrade }: {
@@ -176,7 +176,7 @@ export function DeploymentDetail({ id, onBack, onOpenUpgrade }: {
                   <td className="px-4 py-2.5 text-[12.5px] text-value">{img.releaseDate.replace(/^[A-Za-z]{3}, /, '')}</td>
                   <td className="px-4 py-2.5 text-[12.5px] text-value">{img.size}</td>
                   <td className="px-4 py-2.5 text-[12.5px]">
-                    <Dot color={img.approval === 'Approved' ? '#16A34A' : '#D97706'}>
+                    <Dot color={img.approval === 'Approved' ? '#0D9488' : '#D97706'}>
                       <span className={img.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{img.approval}</span>
                     </Dot>
                   </td>
@@ -196,7 +196,7 @@ export function DeploymentDetail({ id, onBack, onOpenUpgrade }: {
               /* An OS image carries no CVSS rating — the column exists because a
                  patch run fills it, and an upgrade run says so rather than inventing one. */
               severity: d.category === 'OS Upgrade' ? 'Unspecified' : 'Critical',
-              severityColor: d.category === 'OS Upgrade' ? '#6B7280' : '#DC2626',
+              severityColor: d.category === 'OS Upgrade' ? '#6B7280' : '#E11D48',
               deploymentDate: e.deployedOn === '---' ? null : e.deployedOn,
               installStatus: e.status === 'Yet to Receive' ? 'Not Ready' : e.status,
               retry: e.retryCount,
