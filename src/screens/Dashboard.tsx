@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ChevronDown, RefreshCw, Filter, Download, FileText, MoreVertical } from 'lucide-react';
 import { KpiTile, Widget } from '../ui/DashKit';
 import { DonutSplit } from '../ui/FpCharts';
 import { RankedBars, StackedRows } from '../ui/Chart';
-import { OS_UPGRADES, byId } from '../data/osUpgrade';
+import { OS_UPGRADES } from '../data/osUpgrade';
 import {
   upgradedSuccessfully, eolSystems, activeDeployments,
   eolByOsVersion, compatibilityByPatch, topIncompatibilityReasons, compatibilityFor,
@@ -62,10 +62,6 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
     </div>
   );
 
-  const Note = ({ children }: { children: ReactNode }) => (
-    <p className="mt-auto w-full border-t border-line pt-2 text-[11px] leading-relaxed text-label">{children}</p>
-  );
-
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Header: title, dashboard picker, then range + controls + Manage. */}
@@ -117,15 +113,10 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
           />
         </div>
 
-        {/* Distinct endpoints, not a sum of run successes — the same machine can
-            appear in more than one run in the window. */}
-        <p className="mt-2 text-[11px] text-label">
-          Counts are for the selected date range. <span className="font-medium text-value">Upgraded Successfully</span> counts
-          distinct endpoints, so a machine that took two upgrades in the window is counted once.
-        </p>
-
         {/* ── EOL by OS + version, and compatibility per patch ───────────── */}
         <div className="mt-3 grid grid-cols-2 gap-3">
+          {/* Top 10 by count, the rest folded into Others. The bars total the
+              EOL KPI above, because each endpoint runs exactly one OS version. */}
           <Widget title="EOL Systems by OS">
             <div className="pb-4 pt-2">
             <RankedBars
@@ -137,10 +128,6 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
               onRow={(label) => onOpenEndpoints?.(label === 'Others' ? 'eol' : label)}
             />
             </div>
-            <Note>
-              OS + version, highest first — top 10, with anything past that folded into
-              <span className="font-medium text-value"> Others</span>. Bars total {eol.length} endpoints, the EOL KPI above.
-            </Note>
           </Widget>
 
           <Widget title="Compatibility by OS Upgrade Patch">
@@ -159,16 +146,13 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
                 </span>
               ))}
             </div>
-            <Note>
-              Top 10 patches by eligible endpoints. A bar counts only endpoints the patch
-              <em> applies</em> to — already on the build, not applicable and not scanned are excluded, which is why
-              rows differ in length. Click a segment to open that patch at that status.
-            </Note>
           </Widget>
         </div>
 
         {/* ── Reasons, and the per-version split ────────────────────────── */}
         <div className="mt-3 grid grid-cols-2 gap-3">
+          {/* Distinct endpoints per prerequisite. One machine short of both disk
+              and RAM is in both bars, so these deliberately do not sum. */}
           <Widget title="Top Incompatibility Reasons">
             <div className="pb-4 pt-2">
             <RankedBars
@@ -180,11 +164,6 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
               onRow={(label) => onOpenCompatibility?.(compatTarget, label)}
             />
             </div>
-            <Note>
-              Distinct endpoints failing each prerequisite, highest first. One machine short of both
-              disk and RAM appears in both bars, so these do <span className="font-medium text-value">not</span> sum
-              to the blocked total.
-            </Note>
           </Widget>
 
           <Widget
@@ -193,11 +172,6 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
             control={<VersionPicker value={compatTarget} onChange={setCompatTarget} />}
           >
             <div className="py-3"><DonutSplit slices={compatibilityFor(compatTarget)} /></div>
-            <Note>
-              Compatible and incompatible endpoints for the selected version. The centre total is the
-              endpoints <em>eligible</em> for {byId(compatTarget).name} — not the whole fleet, since the rest
-              are already on this build or running a different OS.
-            </Note>
           </Widget>
         </div>
       </div>
