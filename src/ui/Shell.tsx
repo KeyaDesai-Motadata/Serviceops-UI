@@ -55,7 +55,7 @@ const MODULES: Record<string, { label: string; items: NavItem[] }> = {
   patch: {
     label: 'Patch',
     items: [
-      { icon: Cog, label: 'Software Patches', page: 'patches' },
+      { icon: Cog, label: 'Patches', page: 'patches' },
       { icon: MonitorUp, label: 'OS Upgrades', page: 'os-upgrades' },
       { icon: Rocket, label: 'Patch Deployment', page: 'deployments' },
       { icon: Monitor, label: 'Endpoint', page: 'endpoints' },

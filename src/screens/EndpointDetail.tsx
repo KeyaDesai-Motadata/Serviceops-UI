@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { Monitor, Cog, Rocket, StickyNote, ScrollText, ScanLine, Clock } from 'lucide-react';
+import { Monitor, Cog, MonitorUp, Rocket, StickyNote, ScrollText, ScanLine, Clock } from 'lucide-react';
 import { DetailHeader, PrimaryAction, KeyFields, TagRow, PillTabs, InfoRail, Dot, Dash, type TabDef } from '../ui/Detail';
 import { DataTable, Pagination, SearchBar, SideNav, IdPill, type Column } from '../ui/Table';
 
-/* Endpoint detail — the second reference screen, with OS Upgrade added as a
- * fourth bucket in the left sub-nav after Ignored.
+/* Endpoint detail — the second reference screen, with OS Upgrade added as its
+ * own tab beside Patches (not a bucket under the Patches left sub-nav).
  *
- * The bucket lists through the SAME grid as the other three: an OS upgrade
+ * The tab lists through the SAME grid as the patch buckets: an OS upgrade
  * offered to this machine is a row, not a card. The columns an image has no
  * answer for read '---', exactly as they already do for the many catalog
  * patches that carry no KB Number. */
 
 const TABS: TabDef[] = [
   { id: 'patches', label: 'Patches', icon: Cog },
+  { id: 'os-upgrade', label: 'OS Upgrade', icon: MonitorUp },
   { id: 'installation', label: 'Installation', icon: Rocket },
   { id: 'notes', label: 'Notes', icon: StickyNote },
   { id: 'audit', label: 'Audit Trail', icon: ScrollText },
@@ -37,10 +38,12 @@ const ROWS: Row[] = [
 export function EndpointDetail({ onBack, onOpenUpgrade }: { onBack: () => void; onOpenUpgrade: (id: string) => void }) {
   const [tab, setTab] = useState('patches');
   const [bucket, setBucket] = useState<Row['bucket']>('Missing');
+  /* The OS Upgrade tab reuses the grid with the 'OS Upgrade' rows. */
+  const activeBucket: Row['bucket'] = tab === 'os-upgrade' ? 'OS Upgrade' : bucket;
   const [q, setQ] = useState('');
 
   const query = q.trim().toLowerCase();
-  const rows = ROWS.filter((r) => r.bucket === bucket).filter((r) =>
+  const rows = ROWS.filter((r) => r.bucket === activeBucket).filter((r) =>
     !query || r.id.toLowerCase().includes(query) || r.name.toLowerCase().includes(query) ||
     r.category.toLowerCase().includes(query) || r.uuid.toLowerCase().includes(query));
 
@@ -94,23 +97,25 @@ export function EndpointDetail({ onBack, onOpenUpgrade }: { onBack: () => void; 
         <TagRow />
         <PillTabs tabs={TABS} active={tab} onChange={setTab} />
 
-        {tab === 'patches' ? (
+        {tab === 'patches' || tab === 'os-upgrade' ? (
           <div className="flex min-h-0 flex-1">
-            <SideNav
-              items={(['Missing', 'Installed', 'Ignored', 'OS Upgrade'] as const)
-                .map((b) => ({ id: b, label: b }))}
-              active={bucket}
-              onChange={(b) => setBucket(b as Row['bucket'])}
-            />
+            {tab === 'patches' && (
+              <SideNav
+                items={(['Missing', 'Installed', 'Ignored'] as const)
+                  .map((b) => ({ id: b, label: b }))}
+                active={bucket}
+                onChange={(b) => setBucket(b as Row['bucket'])}
+              />
+            )}
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="px-4 py-3"><SearchBar value={q} onChange={setQ} /></div>
               <DataTable
                 columns={cols}
                 rows={rows}
                 rowKey={(r) => r.id}
-                empty={bucket === 'OS Upgrade'
+                empty={activeBucket === 'OS Upgrade'
                   ? 'No OS upgrade is published for this platform.'
-                  : `No ${bucket.toLowerCase()} patches found.`}
+                  : `No ${activeBucket.toLowerCase()} patches found.`}
               />
               <Pagination total={rows.length} noun="items" />
             </div>

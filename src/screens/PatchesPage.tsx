@@ -97,12 +97,12 @@ export function PatchesPage({ tab, onOpen }: {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Software Patches and OS Upgrades are two entries in the Patch sidebar,
+      {/* Patches and OS Upgrades are two entries in the Patch sidebar,
           so each is its own page carrying its own title. The switch happens in
           the nav, and the page does not restate it as a tab. */}
       <div className="flex items-stretch gap-6 border-b border-line px-5">
         <h1 className="flex items-center text-[17px] font-semibold text-ink">
-          {isUpgrades ? 'OS Upgrades' : 'Software Patches'}
+          {isUpgrades ? 'OS Upgrades' : 'Patches'}
         </h1>
 
         {/* No view control on OS Upgrades — one set, nothing to pick between. */}

@@ -13,7 +13,7 @@ import { DeploymentDetail } from './screens/DeploymentDetail';
  * three LISTINGS, and a record is reached by clicking a row. There is no screen
  * switcher — a page you can only reach from a debug strip is not a page.
  *
- *   #/patches                  Software Patches | OS Upgrades
+ *   #/patches                  Patches | OS Upgrades
  *   #/patches/os-upgrades      the OS Upgrade tab
  *   #/patches/OSU-1            one image
  *   #/endpoints                endpoint listing
@@ -77,7 +77,7 @@ const format = (r: Route): string => {
   }
 };
 
-/* Which sidebar entry the flyout should mark as current. Software Patches and
+/* Which sidebar entry the flyout should mark as current. Patches and
  * OS Upgrades are separate entries now, so the two patch tabs resolve to
  * different values — collapsing them would leave the marker on the wrong row. */
 const moduleOf = (r: Route) =>

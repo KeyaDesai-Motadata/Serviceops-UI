@@ -33,7 +33,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
 }) {
   const u = byId(id);
   const [tab, setTab] = useState(initialTab && TABS.some((t) => t.id === initialTab) ? initialTab : 'overview');
-  const [bucket, setBucket] = useState<string>(initialBucket ?? 'Compatible');
+  const [bucket, setBucket] = useState<string>(initialBucket === 'Incompatible' ? 'Incompatible' : 'Compatible');
   const [q, setQ] = useState(initialQuery ?? '');
   const [approval, setApproval] = useState(u.approval);
 
@@ -45,7 +45,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
     r.endpoint.ip.includes(query) || r.reasons.join(' ').toLowerCase().includes(query));
 
   const VERDICT_COLOR: Record<string, string> = {
-    Compatible: '#0D9488', Incompatible: '#E11D48', 'Not scanned': '#D97706',
+    Compatible: '#0D9488', Incompatible: '#E11D48',
   };
   const cols: Column<Evaluated>[] = [
     { key: 'id', header: 'ID', cell: (r) => <IdPill>{r.endpoint.id}</IdPill> },
@@ -150,7 +150,6 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
               items={[
                 { id: 'Compatible', label: 'Compatible' },
                 { id: 'Incompatible', label: 'Incompatible' },
-                { id: 'Not scanned', label: 'Not scanned' },
               ]}
               active={bucket}
               onChange={setBucket}
