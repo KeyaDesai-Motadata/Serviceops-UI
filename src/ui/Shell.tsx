@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   PanelLeft, Sparkles, Plus, Type, Calendar, MessagesSquare, Bell, History,
   Settings, Keyboard, Info, Gauge, Ticket, Users, GitCompareArrows, Share2,
@@ -32,9 +32,9 @@ const RAIL = [
 
 const TOP_ICONS = [Type, Calendar, MessagesSquare, Bell, History, Settings, Keyboard, Info];
 
-/* A module's sub-pages, as the product's sidebar lists them. Hovering the rail
- * icon opens the flyout; this is the only way into the pages, because that is
- * how the product works.
+/* A module's sub-pages, as the product's sidebar lists them. Clicking the rail
+ * icon opens the flyout and it stays open until a page is picked, the icon is
+ * clicked again, the user clicks outside it, or presses Escape.
  *
  * The OS Upgrade Dashboard lives under DASHBOARD, not under Patch. A dashboard
  * is read by people who never open the Patch module — service managers, asset
@@ -74,28 +74,37 @@ export function Shell({ children, page, onNavigate }: {
   /* Which rail module's flyout is open, and which one owns the current page. */
   const [flyout, setFlyout] = useState<string | null>(null);
   const current = page === 'dashboard' ? 'dashboard' : 'patch';
+  const railRef = useRef<HTMLElement>(null);
+
+  /* Close the open flyout on an outside click or Escape. */
+  useEffect(() => {
+    if (!flyout) return;
+    const onDown = (e: MouseEvent) => {
+      if (railRef.current && !railRef.current.contains(e.target as Node)) setFlyout(null);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFlyout(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [flyout]);
 
   return (
     <div className="flex h-full bg-white">
       {/* Icon rail. The active module carries the same near-black fill the
           active tab pill does — one "selected" language across the product. */}
-      <nav className="relative flex w-[52px] flex-none flex-col items-center gap-1 border-r border-line bg-white py-3">
+      <nav ref={railRef} className="relative flex w-[52px] flex-none flex-col items-center gap-1 border-r border-line bg-white py-3">
         {RAIL.map(({ icon: Icon, title, module }, i) => (
           module ? (
-            <div
-              key={i}
-              className="relative"
-              onMouseEnter={() => setFlyout(module)}
-              onMouseLeave={() => setFlyout(null)}
-            >
+            <div key={i} className="relative">
               <button
                 title={title}
-                onClick={() => {
-                  const first = MODULES[module].items.find((it) => it.page);
-                  if (first?.page) onNavigate?.(first.page);
-                }}
+                aria-expanded={flyout === module}
+                onClick={() => setFlyout((f) => (f === module ? null : module))}
                 className={`flex size-9 items-center justify-center rounded-lg transition-colors ${
-                  current === module ? 'bg-ink text-white' : 'text-ink-soft hover:bg-strip'
+                  current === module || flyout === module ? 'bg-ink text-white' : 'text-ink-soft hover:bg-strip'
                 }`}
               >
                 <Icon size={18} strokeWidth={1.7} />
