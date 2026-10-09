@@ -19,7 +19,7 @@ export interface OsUpgrade {
   releaseDate: string;
   eosDate: string;
   approval: 'Approved' | 'Not Approved';
-  testStatus: string;
+  kb: string;                   // Microsoft KB article for the feature update
   source: string;
   status: string;
   downloadStatus: string;
@@ -55,10 +55,10 @@ const WINSRV: Prereq[] = [
 
 export const OS_UPGRADES: OsUpgrade[] = [
   {
-    id: 'OSU-1', name: 'Windows 11 (25H2) Enterprise (x64)', family: 'Windows 11',
+    id: 'OSU-1', kb: 'KB5054156', name: 'Windows 11 (25H2) Enterprise (x64)', family: 'Windows 11',
     edition: 'Enterprise', osVersion: '25H2', build: 26200, architecture: '64 BIT', language: 'English (US)',
     size: '5.2 GB', releaseDate: 'Tue, Sep 30, 2025 05:30 PM', eosDate: '14 Oct 2027',
-    approval: 'Approved', testStatus: 'Not Tested', source: 'Vendor Catalog', status: 'Published',
+    approval: 'Approved', source: 'Vendor Catalog', status: 'Published',
     downloadStatus: 'Success', downloadOn: 'Sun, Jul 12, 2026 10:22 AM', rebootRequired: 'Yes',
     uuid: 'win11-25h2-enterprise-x64',
     referenceUrl: 'https://www.microsoft.com/software-download/windows11',
@@ -66,10 +66,10 @@ export const OS_UPGRADES: OsUpgrade[] = [
     prereqs: WIN11,
   },
   {
-    id: 'OSU-2', name: 'Windows 11 (24H2) Pro (x64)', family: 'Windows 11',
+    id: 'OSU-2', kb: 'KB5044284', name: 'Windows 11 (24H2) Pro (x64)', family: 'Windows 11',
     edition: 'Pro', osVersion: '24H2', build: 26100, architecture: '64 BIT', language: 'English (US)',
     size: '5.6 GB', releaseDate: 'Tue, Oct 01, 2024 05:30 PM', eosDate: '13 Oct 2026',
-    approval: 'Approved', testStatus: 'Passed', source: 'Vendor Catalog', status: 'Published',
+    approval: 'Approved', source: 'Vendor Catalog', status: 'Published',
     downloadStatus: 'Success', downloadOn: 'Thu, Jul 02, 2026 04:38 PM', rebootRequired: 'Yes',
     uuid: 'win11-24h2-pro-x64',
     referenceUrl: 'https://www.microsoft.com/software-download/windows11',
@@ -77,10 +77,10 @@ export const OS_UPGRADES: OsUpgrade[] = [
     prereqs: WIN11,
   },
   {
-    id: 'OSU-3', name: 'Windows 10 (22H2) Enterprise (x64)', family: 'Windows 10',
+    id: 'OSU-3', kb: 'KB5015684', name: 'Windows 10 (22H2) Enterprise (x64)', family: 'Windows 10',
     edition: 'Enterprise', osVersion: '22H2', build: 19045, architecture: '64 BIT', language: 'English (US)',
     size: '4.7 GB', releaseDate: 'Tue, Oct 18, 2022 05:30 PM', eosDate: '14 Oct 2025',
-    approval: 'Approved', testStatus: 'Passed', source: 'Vendor Catalog', status: 'Published',
+    approval: 'Approved', source: 'Vendor Catalog', status: 'Published',
     downloadStatus: 'Success', downloadOn: 'Thu, Jun 18, 2026 11:04 AM', rebootRequired: 'Yes',
     uuid: 'win10-22h2-enterprise-x64',
     referenceUrl: 'https://www.microsoft.com/software-download/windows10',
@@ -88,10 +88,10 @@ export const OS_UPGRADES: OsUpgrade[] = [
     prereqs: WIN11,
   },
   {
-    id: 'OSU-4', name: 'Windows Server 2025 Datacenter (x64)', family: 'Windows Server 2022',
+    id: 'OSU-4', kb: 'KB5044281', name: 'Windows Server 2025 Datacenter (x64)', family: 'Windows Server 2022',
     edition: 'Datacenter', osVersion: '24H2', build: 26100, architecture: '64 BIT', language: 'English (US)',
     size: '6.4 GB', releaseDate: 'Fri, Nov 01, 2024 05:30 PM', eosDate: '10 Oct 2034',
-    approval: 'Not Approved', testStatus: 'Not Tested', source: 'Vendor Catalog', status: 'Published',
+    approval: 'Not Approved', source: 'Vendor Catalog', status: 'Published',
     downloadStatus: 'Success', downloadOn: 'Wed, Apr 08, 2026 10:09 AM', rebootRequired: 'Yes',
     uuid: 'winsrv-2025-datacenter-x64',
     referenceUrl: 'https://www.microsoft.com/evalcenter/windows-server-2025',

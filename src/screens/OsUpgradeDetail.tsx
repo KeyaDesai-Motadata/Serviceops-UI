@@ -78,13 +78,13 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
         <KeyFields
           fields={[
             { label: 'Patch Category', value: 'OS Upgrade' },
-            { label: 'Upgrades to', value: u.family },
+            { label: 'Platform', value: u.family },
             { label: 'Approval Status', value: (
               <Dot color={approval === 'Approved' ? '#0D9488' : '#D97706'}>
                 <span className={approval === 'Approved' ? 'text-ok' : 'text-warn'}>{approval}</span>
               </Dot>
             ) },
-            { label: 'Test Status', value: u.testStatus },
+            { label: 'KB Number', value: u.kb },
             { label: 'Release Date', value: u.releaseDate.replace(/^[A-Za-z]{3}, /, '') },
             { label: 'End of Support', value: u.eosDate },
             { label: 'Edition', value: u.edition },

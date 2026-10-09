@@ -47,7 +47,7 @@ export function EndpointDetail({ onBack, onOpenUpgrade }: { onBack: () => void; 
     !query || r.id.toLowerCase().includes(query) || r.name.toLowerCase().includes(query) ||
     r.category.toLowerCase().includes(query) || r.uuid.toLowerCase().includes(query));
 
-  const cols: Column<Row>[] = [
+  const allCols: Column<Row>[] = [
     { key: 'id', header: 'ID', cell: (r) => (
       r.bucket === 'OS Upgrade'
         ? <button onClick={() => onOpenUpgrade(r.id)}><IdPill>{r.id}</IdPill></button>
@@ -66,6 +66,8 @@ export function EndpointDetail({ onBack, onOpenUpgrade }: { onBack: () => void; 
     { key: 'size', header: 'Download Size', cell: (r) => r.size },
     { key: 'uuid', header: 'UUID', cell: (r) => <span className="block max-w-[220px] truncate">{r.uuid}</span> },
   ];
+  /* An OS upgrade carries no severity, so the OS Upgrade tab drops the column. */
+  const cols = tab === 'os-upgrade' ? allCols.filter((c) => c.key !== 'sev') : allCols;
 
   return (
     <div className="flex h-full min-h-0">
