@@ -58,8 +58,8 @@ export const OS_UPGRADES: OsUpgrade[] = [
     id: 'OSU-1', kb: 'KB5054156', name: 'Windows 11 (25H2) Enterprise (x64)', family: 'Windows 11',
     edition: 'Enterprise', osVersion: '25H2', build: 26200, architecture: '64 BIT', language: 'English (US)',
     size: '5.2 GB', releaseDate: 'Tue, Sep 30, 2025 05:30 PM', eosDate: '14 Oct 2027',
-    approval: 'Approved', source: 'Vendor Catalog', status: 'Published',
-    downloadStatus: 'Success', downloadOn: 'Sun, Jul 12, 2026 10:22 AM', rebootRequired: 'Yes',
+    approval: 'Approved', source: 'Manual Upload', status: 'Published',
+    downloadStatus: 'Awaiting Upload', downloadOn: '---', rebootRequired: 'Yes',
     uuid: 'win11-25h2-enterprise-x64',
     referenceUrl: 'https://www.microsoft.com/software-download/windows11',
     description: 'Feature upgrade to Windows 11, version 25H2 for Enterprise editions. Replaces the running operating system in place, preserving installed applications and user data. A restart is required and the device must meet every prerequisite before the upgrade is offered to it.',
@@ -80,7 +80,7 @@ export const OS_UPGRADES: OsUpgrade[] = [
     id: 'OSU-3', kb: 'KB5015684', name: 'Windows 10 (22H2) Enterprise (x64)', family: 'Windows 10',
     edition: 'Enterprise', osVersion: '22H2', build: 19045, architecture: '64 BIT', language: 'English (US)',
     size: '4.7 GB', releaseDate: 'Tue, Oct 18, 2022 05:30 PM', eosDate: '14 Oct 2025',
-    approval: 'Approved', source: 'Vendor Catalog', status: 'Published',
+    approval: 'Approved', source: 'Manual Upload', status: 'Published',
     downloadStatus: 'Success', downloadOn: 'Thu, Jun 18, 2026 11:04 AM', rebootRequired: 'Yes',
     uuid: 'win10-22h2-enterprise-x64',
     referenceUrl: 'https://www.microsoft.com/software-download/windows10',
@@ -99,6 +99,13 @@ export const OS_UPGRADES: OsUpgrade[] = [
     prereqs: WINSRV,
   },
 ];
+
+/* ⚠️ Enterprise images are volume-licensed: Microsoft publishes them only
+ * through the Microsoft 365 admin center / VLSC, behind the customer's own
+ * licence sign-in, so there is nothing for the catalogue to download. The
+ * record is created from the catalogue, but the ISO must be uploaded by hand
+ * before the upgrade can be deployed. */
+export const needsManualUpload = (u: OsUpgrade) => u.edition === 'Enterprise';
 
 export const byId = (id: string) => OS_UPGRADES.find((u) => u.id === id) ?? OS_UPGRADES[0];
 

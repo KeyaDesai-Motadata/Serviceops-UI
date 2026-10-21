@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Cog, Monitor, ListChecks, Rocket, ScrollText, Check, X, Circle, LayoutGrid, Files, Download, RefreshCw, Link2, Copy } from 'lucide-react';
+import { Cog, Monitor, ListChecks, Rocket, ScrollText, Check, X, Circle, LayoutGrid, Files, Download, RefreshCw, Link2, UploadCloud } from 'lucide-react';
 import {
   DetailHeader, PrimaryAction, DangerAction, KeyFields, TagRow, DescriptionCard,
   PillTabs, InfoRail, Dot, Dash, type TabDef,
 } from '../ui/Detail';
 import { DataTable, Pagination, SearchBar, SideNav, IdPill, type Column } from '../ui/Table';
 import { InstallationTab } from '../ui/InstallationTab';
+import { FileDetailsTab, type ImageFile } from '../ui/FileDetailsTab';
 import { installRowsFor } from '../data/install';
-import { byId, eligibleFor, countsFor, type Evaluated } from '../data/osUpgrade';
+import { byId, eligibleFor, countsFor, needsManualUpload, type Evaluated } from '../data/osUpgrade';
 
 /* OS Upgrade detail.
  *
@@ -16,7 +17,9 @@ import { byId, eligibleFor, countsFor, type Evaluated } from '../data/osUpgrade'
  * Prerequisites replaces Affected Products (an image IS the product, so a list
  * of what it affects would only restate the title), and there is no Superseded,
  * because an ISO has no supersedence chain. File Details sits where the patch
- * page has it, after Endpoint: the image is one file, listed the same way. */
+ * page has it, after Endpoint: the image is one file, listed the same way.
+ * An Enterprise image is uploaded by hand, and until it is, every place that
+ * names the file says so and points at this tab. */
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid },
@@ -38,6 +41,14 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
   const [bucket, setBucket] = useState<string>(initialBucket === 'Incompatible' ? 'Incompatible' : 'Compatible');
   const [q, setQ] = useState(initialQuery ?? '');
   const [approval, setApproval] = useState(u.approval);
+  const manual = needsManualUpload(u);
+  const [file, setFile] = useState<ImageFile | null>(u.downloadStatus === 'Success' ? {
+    name: `${u.uuid}.iso`, size: u.size, language: u.language,
+    source: manual ? 'Manual Upload' : 'Vendor Catalog',
+    uploadedBy: manual ? 'Rakesh Rathod' : 'System', uploadedOn: u.downloadOn,
+  } : null);
+  const awaiting = manual && !file;
+  const tabs = TABS.map((t) => t.id === 'files' ? { ...t, attention: awaiting } : t);
 
   const fleet = eligibleFor(u);
   const c = countsFor(u);
@@ -45,21 +56,6 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
   const rows = fleet.filter((r) => r.verdict === bucket).filter((r) =>
     !query || r.endpoint.id.toLowerCase().includes(query) || r.endpoint.hostName.toLowerCase().includes(query) ||
     r.endpoint.ip.includes(query) || r.reasons.join(' ').toLowerCase().includes(query));
-
-  /* One image, one file. The same name the Overview's Files card shows. */
-  const files = [{ name: `${u.uuid}.iso`, size: u.size, language: u.language }];
-  const fileCols: Column<typeof files[number]>[] = [
-    { key: 'sr', header: 'Sr.No', width: 70, cell: (f) => files.indexOf(f) + 1 },
-    { key: 'name', header: 'File Name', cell: (f) => f.name },
-    { key: 'size', header: 'Size', cell: (f) => f.size },
-    { key: 'lang', header: 'Language', cell: (f) => f.language },
-    { key: 'actions', header: 'Actions', width: 90, cell: (f) => (
-      <span className="flex items-center gap-2.5 text-label">
-        <button title="Copy file name" onClick={() => navigator.clipboard?.writeText(f.name)} className="hover:text-ink"><Copy size={15} /></button>
-        <button title="Download" className="hover:text-ink"><Download size={15} /></button>
-      </span>
-    ) },
-  ];
 
   const VERDICT_COLOR: Record<string, string> = {
     Compatible: '#0D9488', Incompatible: '#E11D48',
@@ -119,7 +115,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
         <TagRow />
         <DescriptionCard title="Upgrade Details">{u.description}</DescriptionCard>
 
-        <PillTabs tabs={TABS} active={tab} onChange={setTab} />
+        <PillTabs tabs={tabs} active={tab} onChange={setTab} />
 
         {tab === 'overview' && (
           <div className="scroll-y min-h-0 flex-1 px-5 py-4">
@@ -151,10 +147,21 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
                   <h3 className="text-[13px] font-semibold text-ink">Files</h3>
                   <button onClick={() => setTab('files')} className="ml-auto text-[12px] font-medium text-link hover:underline">View more ›</button>
                 </div>
-                <div className="mt-3 rounded-md bg-strip px-3 py-2">
-                  <div className="truncate text-[12.5px] text-value">{u.uuid}.iso</div>
-                  <div className="mt-0.5 text-[11.5px] text-label">{u.size} · Language: {u.language}</div>
-                </div>
+                {file ? (
+                  <div className="mt-3 rounded-md bg-strip px-3 py-2">
+                    <div className="truncate text-[12.5px] text-value">{file.name}</div>
+                    <div className="mt-0.5 text-[11.5px] text-label">{file.size} · Language: {file.language}</div>
+                  </div>
+                ) : (
+                  <button onClick={() => setTab('files')}
+                    className="mt-3 flex w-full items-center gap-2 rounded-md border border-dashed border-warn/50 bg-warn-soft px-3 py-2 text-left hover:brightness-[0.98]">
+                    <UploadCloud size={15} className="flex-none text-warn" />
+                    <span className="min-w-0">
+                      <span className="block text-[12.5px] font-medium text-warn">ISO upload required</span>
+                      <span className="block text-[11.5px] text-label">{u.edition} images are not downloaded automatically</span>
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -230,9 +237,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
         )}
 
         {tab === 'files' && (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <DataTable columns={fileCols} rows={files} rowKey={(f) => f.name} selectable={false} empty="No files found." />
-          </div>
+          <FileDetailsTab u={u} file={file} manual={manual} onUploaded={setFile} onRemove={() => setFile(null)} />
         )}
 
         {tab === 'installation' && (
@@ -266,7 +271,9 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
           <div className="scroll-y min-h-0 flex-1 px-5 py-4">
             {[
               [`System has created OS Upgrade ${u.id}.`, 'Mon, Sep 21, 2026 05:24 PM (3 days ago)'],
-              [`Image downloaded from source — ${u.size}.`, u.downloadOn],
+              ...(file ? [[manual
+                ? `${file.uploadedBy} uploaded ${file.name} — ${file.size}.`
+                : `Image downloaded from source — ${file.size}.`, file.uploadedOn]] : []),
               [`Approval Status changed to ${approval}.`, 'Mon, Sep 21, 2026 05:31 PM'],
             ].map(([text, when], i) => (
               <div key={i} className="flex items-start gap-3 border-b border-line-soft py-3 last:border-0">
@@ -277,7 +284,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
                 </div>
               </div>
             ))}
-            <Pagination total={3} noun="Audit Trail" />
+            <Pagination total={file ? 3 : 2} noun="Audit Trail" />
           </div>
         )}
       </div>
@@ -287,11 +294,13 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
         fields: [
           { label: 'UUID', value: <span className="break-all">{u.uuid}</span> },
           { label: 'Architecture', value: u.architecture },
-          { label: 'Source', value: u.source },
+          { label: 'Source', value: manual ? 'Manual Upload' : u.source },
           { label: 'Status', value: u.status },
-          { label: 'Download Status', value: u.downloadStatus },
-          { label: 'Download On', value: u.downloadOn },
-          { label: 'Download Size', value: u.size },
+          { label: 'Download Status', value: awaiting
+            ? <Dot color="#D97706"><button onClick={() => setTab('files')} className="text-warn hover:underline">Awaiting Upload</button></Dot>
+            : 'Success' },
+          { label: manual ? 'Uploaded On' : 'Download On', value: file ? file.uploadedOn : <Dash /> },
+          { label: 'Download Size', value: file ? file.size : <Dash /> },
           { label: 'Reboot Required', value: u.rebootRequired },
           { label: 'Support Uninstallation', value: 'No' },
           { label: 'Approved By', value: approval === 'Approved' ? 'Rakesh Rathod' : <Dash /> },

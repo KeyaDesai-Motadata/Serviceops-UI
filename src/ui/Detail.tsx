@@ -136,7 +136,11 @@ export const DescriptionCard = ({ title, children }: { title: string; children: 
 
 // ── tabs ──────────────────────────────────────────────────────────────────
 
-export interface TabDef { id: string; label: string; icon: ComponentType<{ size?: number; className?: string }>; }
+export interface TabDef {
+  id: string; label: string; icon: ComponentType<{ size?: number; className?: string }>;
+  /** An amber dot on the pill: the tab holds something the user still has to do. */
+  attention?: boolean;
+}
 
 /* Pill tabs on a grey strip, the active one filled near-black. Note this is the
  * same fill the left rail's active module and the primary button use. */
@@ -145,7 +149,7 @@ export function PillTabs({ tabs, active, onChange }: {
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 bg-strip px-5 py-2.5">
-      {tabs.map(({ id, label, icon: Icon }) => (
+      {tabs.map(({ id, label, icon: Icon, attention }) => (
         <button
           key={id}
           onClick={() => onChange(id)}
@@ -155,6 +159,7 @@ export function PillTabs({ tabs, active, onChange }: {
         >
           <Icon size={14} />
           {label}
+          {attention && <span className="size-1.5 flex-none rounded-full bg-warn" title="Action required" />}
         </button>
       ))}
     </div>
