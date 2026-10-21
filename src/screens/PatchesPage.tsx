@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History, UploadCloud, X } from 'lucide-react';
+import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History, UploadCloud } from 'lucide-react';
 import { DataTable, Pagination, SearchBar, IdPill, type Column } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
 import { OS_UPGRADES, countsFor, needsManualUpload, type OsUpgrade } from '../data/osUpgrade';
@@ -33,17 +33,15 @@ export function PatchesPage({ tab, onOpen }: {
   tab: PatchTab; onOpen: (id: string, tab?: string) => void;
 }) {
   const [q, setQ] = useState('');
-  const [onlyAwaiting, setOnlyAwaiting] = useState(false);
   const isUpgrades = tab === 'os-upgrades';
   const query = q.trim().toLowerCase();
 
   /* Enterprise images the catalogue cannot fetch, still without an ISO. They
-     look deployable from the list otherwise, so the list says so twice: a
-     banner counting them, and a chip on each row that opens File Details. */
+     look deployable from the list otherwise, so each row carries a chip that
+     opens File Details. */
   const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
-  const awaitingCount = OS_UPGRADES.filter(awaiting).length;
 
-  const upgrades = OS_UPGRADES.filter((u) => !onlyAwaiting || awaiting(u)).filter((u) =>
+  const upgrades = OS_UPGRADES.filter((u) =>
     !query || u.id.toLowerCase().includes(query) || u.name.toLowerCase().includes(query) ||
     u.edition.toLowerCase().includes(query) || u.osVersion.toLowerCase().includes(query));
 
@@ -149,25 +147,6 @@ export function PatchesPage({ tab, onOpen }: {
           placeholder={isUpgrades ? 'Search image, edition, version...' : 'Select field to search...'}
         />
       </div>
-
-      {isUpgrades && awaitingCount > 0 && (
-        <div className="mx-5 mb-3 flex items-center gap-2.5 rounded-lg border border-warn/30 bg-warn-soft px-4 py-2.5 text-[12.5px]">
-          <UploadCloud size={16} className="flex-none text-warn" />
-          <span className="text-value">
-            <b className="font-semibold text-warn">{awaitingCount} {awaitingCount === 1 ? 'image needs' : 'images need'} a manual ISO upload</b>
-            {' '}— Enterprise images are not downloaded automatically and cannot be deployed until the ISO is uploaded.
-          </span>
-          {onlyAwaiting ? (
-            <button onClick={() => setOnlyAwaiting(false)} className="ml-auto flex flex-none items-center gap-1 font-medium text-link hover:underline">
-              <X size={13} /> Show all
-            </button>
-          ) : (
-            <button onClick={() => setOnlyAwaiting(true)} className="ml-auto flex-none font-medium text-link hover:underline">
-              Show only these ›
-            </button>
-          )}
-        </div>
-      )}
 
       {isUpgrades
         ? <DataTable columns={upgradeCols} rows={upgrades} rowKey={(u) => u.id} empty="No OS upgrades found." />
