@@ -37,8 +37,8 @@ export function PatchesPage({ tab, onOpen }: {
   const query = q.trim().toLowerCase();
 
   /* Enterprise images the catalogue cannot fetch, still without an ISO. They
-     look deployable from the list otherwise, so each row carries a chip that
-     opens File Details. */
+     look deployable from the list otherwise, so the name carries an amber
+     upload icon that opens File Details. */
   const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
 
   const upgrades = OS_UPGRADES.filter((u) =>
@@ -52,16 +52,18 @@ export function PatchesPage({ tab, onOpen }: {
   const upgradeCols: Column<OsUpgrade>[] = [
     { key: 'id', header: 'Patch ID', cell: (u) => <button onClick={() => onOpen(u.id)}><IdPill>{u.id}</IdPill></button> },
     { key: 'name', header: 'Name', cell: (u) => (
-      <button onClick={() => onOpen(u.id)} className="flex items-center gap-2 text-left hover:text-link">
-        <MonitorUp size={14} className="flex-none text-label" />{u.name}
-      </button>
+      <span className="flex items-center gap-2">
+        <button onClick={() => onOpen(u.id)} className="flex items-center gap-2 text-left hover:text-link">
+          <MonitorUp size={14} className="flex-none text-label" />{u.name}
+        </button>
+        {awaiting(u) && (
+          <button onClick={() => onOpen(u.id, 'files')} title={`ISO upload required — ${u.edition} image`}
+            className="flex size-6 flex-none items-center justify-center rounded-md text-warn hover:bg-warn-soft">
+            <UploadCloud size={15} />
+          </button>
+        )}
+      </span>
     ) },
-    { key: 'file', header: 'ISO File', cell: (u) => awaiting(u) ? (
-      <button onClick={() => onOpen(u.id, 'files')} title="Open File Details to upload the ISO"
-        className="inline-flex items-center gap-1.5 rounded-full border border-warn/40 bg-warn-soft px-2.5 py-0.5 text-[12px] font-medium text-warn hover:brightness-[0.97]">
-        <UploadCloud size={13} /> Upload required
-      </button>
-    ) : <Dot color="#0D9488"><span className="text-ok">Available</span></Dot> },
     { key: 'release', header: 'Release Date', cell: (u) => shortDate(u.releaseDate) },
     { key: 'eos', header: 'End of Support', cell: (u) => eosDate(u.eosDate) },
     /* Compatibility takes the slot Severity has on the patch grid — an image
