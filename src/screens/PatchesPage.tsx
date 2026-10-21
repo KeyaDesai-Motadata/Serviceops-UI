@@ -37,8 +37,8 @@ export function PatchesPage({ tab, onOpen }: {
   const query = q.trim().toLowerCase();
 
   /* Enterprise images the catalogue cannot fetch, still without an ISO. They
-     look deployable from the list otherwise, so Download Status names them
-     Awaiting Upload rather than leaving the cell blank. */
+     look deployable from the list otherwise, so Upload Status names them
+     Yet to Upload rather than leaving the cell blank. */
   const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
 
   const upgrades = OS_UPGRADES.filter((u) =>
@@ -77,13 +77,13 @@ export function PatchesPage({ tab, onOpen }: {
         <span className={u.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{u.approval}</span>
       </Dot>
     ) },
-    { key: 'download', header: 'Download Status', cell: (u) => awaiting(u) ? (
+    { key: 'upload', header: 'Upload Status', cell: (u) => awaiting(u) ? (
       <Dot color="#D97706">
         <button onClick={() => onOpen(u.id, 'files')} title="Open File Details to upload the ISO" className="text-warn hover:underline">
-          Awaiting Upload
+          Yet to Upload
         </button>
       </Dot>
-    ) : <Dot color="#0D9488"><span className="text-ok">{u.downloadStatus}</span></Dot> },
+    ) : <Dot color="#0D9488"><span className="text-ok">Success</span></Dot> },
   ];
 
   const patchCols: Column<Patch>[] = [

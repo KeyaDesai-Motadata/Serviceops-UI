@@ -59,7 +59,7 @@ export const OS_UPGRADES: OsUpgrade[] = [
     edition: 'Enterprise', osVersion: '25H2', build: 26200, architecture: '64 BIT', language: 'English (US)',
     size: '5.2 GB', releaseDate: 'Tue, Sep 30, 2025 05:30 PM', eosDate: '14 Oct 2027',
     approval: 'Approved', source: 'Manual Upload', status: 'Published',
-    downloadStatus: 'Awaiting Upload', downloadOn: '---', rebootRequired: 'Yes',
+    downloadStatus: 'Yet to Upload', downloadOn: '---', rebootRequired: 'Yes',
     uuid: 'win11-25h2-enterprise-x64',
     referenceUrl: 'https://www.microsoft.com/software-download/windows11',
     description: 'Feature upgrade to Windows 11, version 25H2 for Enterprise editions. Replaces the running operating system in place, preserving installed applications and user data. A restart is required and the device must meet every prerequisite before the upgrade is offered to it.',

@@ -302,8 +302,8 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
           { label: 'Architecture', value: u.architecture },
           { label: 'Source', value: manual ? 'Manual Upload' : u.source },
           { label: 'Status', value: u.status },
-          { label: 'Download Status', value: awaiting
-            ? <Dot color="#D97706"><button onClick={() => setTab('files')} className="text-warn hover:underline">Awaiting Upload</button></Dot>
+          { label: manual ? 'Upload Status' : 'Download Status', value: awaiting
+            ? <Dot color="#D97706"><button onClick={() => setTab('files')} className="text-warn hover:underline">Yet to Upload</button></Dot>
             : 'Success' },
           { label: manual ? 'Uploaded On' : 'Download On', value: file ? file.uploadedOn : <Dash /> },
           { label: 'Download Size', value: file ? file.size : <Dash /> },
