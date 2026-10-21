@@ -8,7 +8,7 @@ import type { OsUpgrade } from '../data/osUpgrade';
  *
  * Three states, one place:
  *   catalogue image   → the grid, as on a patch.
- *   awaiting upload   → why it is needed, what file is expected, a drop zone.
+ *   awaiting upload   → why it is needed, and a drop zone.
  *   uploading         → progress, then verification against the record.
  * Once uploaded the grid returns, with Replace and Remove on the row. */
 
@@ -105,15 +105,6 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
   }
 
   // ── awaiting upload / uploading ───────────────────────────────────────────
-  const expected: [string, string][] = [
-    ['Edition', u.edition],
-    ['Version', `${u.osVersion} (build ${u.build})`],
-    ['Architecture', u.architecture],
-    ['Language', u.language],
-    ['Format', '.iso'],
-    ['Approx. Size', u.size],
-  ];
-
   return (
     <div className="scroll-y min-h-0 flex-1 px-5 py-4">
       {picker}
@@ -133,7 +124,7 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_280px] gap-4">
+      <div className="mt-4">
         {progress ? (
           <div className="flex flex-col justify-center rounded-lg border border-line px-6 py-8">
             <div className="flex items-center gap-2 text-[13px] text-value">
@@ -154,7 +145,7 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
             onDrop={onDrop}
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors ${
+            className={`flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors ${
               drag ? 'border-link bg-[#EFF4FF]' : 'border-line hover:border-link hover:bg-strip'
             }`}
           >
@@ -166,21 +157,6 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
           </button>
         )}
 
-        {/* What file: so the right image is chosen the first time. */}
-        <div className="rounded-lg bg-strip p-4">
-          <h3 className="mb-3 text-[13px] font-semibold text-ink">Expected image</h3>
-          <div className="flex flex-col gap-2.5">
-            {expected.map(([k, v]) => (
-              <div key={k} className="flex items-baseline justify-between gap-3 text-[12.5px]">
-                <span className="text-label">{k}</span>
-                <span className="text-right font-medium text-value">{v}</span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 border-t border-line pt-3 text-[11.5px] leading-relaxed text-label">
-            A file that does not match is rejected, so an image for the wrong edition or language never reaches a device.
-          </p>
-        </div>
       </div>
     </div>
   );
