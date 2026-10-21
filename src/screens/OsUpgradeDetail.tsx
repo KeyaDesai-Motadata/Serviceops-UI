@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cog, Monitor, ListChecks, Rocket, ScrollText, Check, X, Circle, LayoutGrid, Files, Download, RefreshCw } from 'lucide-react';
+import { Cog, Monitor, ListChecks, Rocket, ScrollText, Check, X, Circle, LayoutGrid, Files, Download, RefreshCw, Link2, Copy } from 'lucide-react';
 import {
   DetailHeader, PrimaryAction, DangerAction, KeyFields, TagRow, DescriptionCard,
   PillTabs, InfoRail, Dot, Dash, type TabDef,
@@ -15,12 +15,14 @@ import { byId, eligibleFor, countsFor, type Evaluated } from '../data/osUpgrade'
  * description card, pill tabs, Other Info rail. Two tabs differ from a patch:
  * Prerequisites replaces Affected Products (an image IS the product, so a list
  * of what it affects would only restate the title), and there is no Superseded,
- * because an ISO has no supersedence chain. */
+ * because an ISO has no supersedence chain. File Details sits where the patch
+ * page has it, after Endpoint: the image is one file, listed the same way. */
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid },
   { id: 'prereq', label: 'Prerequisites', icon: ListChecks },
   { id: 'endpoint', label: 'Endpoint', icon: Monitor },
+  { id: 'files', label: 'File Details', icon: Link2 },
   { id: 'installation', label: 'Installation', icon: Rocket },
   { id: 'audit', label: 'Audit Trail', icon: ScrollText },
 ];
@@ -43,6 +45,21 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
   const rows = fleet.filter((r) => r.verdict === bucket).filter((r) =>
     !query || r.endpoint.id.toLowerCase().includes(query) || r.endpoint.hostName.toLowerCase().includes(query) ||
     r.endpoint.ip.includes(query) || r.reasons.join(' ').toLowerCase().includes(query));
+
+  /* One image, one file. The same name the Overview's Files card shows. */
+  const files = [{ name: `${u.uuid}.iso`, size: u.size, language: u.language }];
+  const fileCols: Column<typeof files[number]>[] = [
+    { key: 'sr', header: 'Sr.No', width: 70, cell: (f) => files.indexOf(f) + 1 },
+    { key: 'name', header: 'File Name', cell: (f) => f.name },
+    { key: 'size', header: 'Size', cell: (f) => f.size },
+    { key: 'lang', header: 'Language', cell: (f) => f.language },
+    { key: 'actions', header: 'Actions', width: 90, cell: (f) => (
+      <span className="flex items-center gap-2.5 text-label">
+        <button title="Copy file name" onClick={() => navigator.clipboard?.writeText(f.name)} className="hover:text-ink"><Copy size={15} /></button>
+        <button title="Download" className="hover:text-ink"><Download size={15} /></button>
+      </span>
+    ) },
+  ];
 
   const VERDICT_COLOR: Record<string, string> = {
     Compatible: '#0D9488', Incompatible: '#E11D48',
@@ -132,7 +149,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
                 <div className="flex items-center gap-2">
                   <Files size={15} className="text-label" />
                   <h3 className="text-[13px] font-semibold text-ink">Files</h3>
-                  <span className="ml-auto text-[12px] text-label">1</span>
+                  <button onClick={() => setTab('files')} className="ml-auto text-[12px] font-medium text-link hover:underline">View more ›</button>
                 </div>
                 <div className="mt-3 rounded-md bg-strip px-3 py-2">
                   <div className="truncate text-[12.5px] text-value">{u.uuid}.iso</div>
@@ -209,6 +226,12 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
                 </button>
               </div>
             </section>
+          </div>
+        )}
+
+        {tab === 'files' && (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <DataTable columns={fileCols} rows={files} rowKey={(f) => f.name} selectable={false} empty="No files found." />
           </div>
         )}
 
