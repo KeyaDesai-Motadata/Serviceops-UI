@@ -82,6 +82,12 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, initialTab, initialBuck
           icon={Cog}
           id={u.id}
           title={u.name}
+          badge={awaiting && (
+            <button onClick={() => setTab('files')} title="Open File Details to upload the ISO"
+              className="inline-flex flex-none items-center gap-1.5 rounded-full border border-warn/40 bg-warn-soft px-2.5 py-0.5 text-[12px] font-medium text-warn hover:brightness-[0.97]">
+              <UploadCloud size={13} /> Upload required
+            </button>
+          )}
           onBack={onBack}
           action={approval === 'Approved'
             ? <DangerAction onClick={() => setApproval('Not Approved')}><X size={14} /> Decline</DangerAction>

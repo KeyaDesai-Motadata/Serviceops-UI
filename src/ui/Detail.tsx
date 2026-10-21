@@ -11,11 +11,13 @@ import { ChevronLeft, ChevronRight, RefreshCw, MoreVertical, Tag, Plus, Maximize
 // ── header ────────────────────────────────────────────────────────────────
 
 export function DetailHeader({
-  icon: Icon, id, title, subtitle, dot, action, paging = true, onBack,
+  icon: Icon, id, title, badge, subtitle, dot, action, paging = true, onBack,
 }: {
   icon: ComponentType<{ size?: number; className?: string }>;
   id: string;
   title: string;
+  /** A status tag beside the title, for a state that blocks the record. */
+  badge?: ReactNode;
   /** The timestamp line the endpoint page carries under its title. */
   subtitle?: ReactNode;
   /** Health dot before the id pill, as on the endpoint page. */
@@ -40,6 +42,7 @@ export function DetailHeader({
             {id}
           </span>
           <h1 className="truncate text-[17px] font-semibold text-ink">{title}</h1>
+          {badge}
         </div>
         {subtitle && <div className="mt-1 text-[12px] text-label">{subtitle}</div>}
       </div>

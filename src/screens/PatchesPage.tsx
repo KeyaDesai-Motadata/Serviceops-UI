@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History, UploadCloud } from 'lucide-react';
+import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History } from 'lucide-react';
 import { DataTable, Pagination, SearchBar, IdPill, type Column } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
 import { OS_UPGRADES, countsFor, needsManualUpload, type OsUpgrade } from '../data/osUpgrade';
@@ -37,8 +37,8 @@ export function PatchesPage({ tab, onOpen }: {
   const query = q.trim().toLowerCase();
 
   /* Enterprise images the catalogue cannot fetch, still without an ISO. They
-     look deployable from the list otherwise, so each row carries a chip that
-     opens File Details. */
+     look deployable from the list otherwise, so Download Status names them
+     Awaiting Upload rather than leaving the cell blank. */
   const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
 
   const upgrades = OS_UPGRADES.filter((u) =>
@@ -56,12 +56,6 @@ export function PatchesPage({ tab, onOpen }: {
         <MonitorUp size={14} className="flex-none text-label" />{u.name}
       </button>
     ) },
-    { key: 'file', header: 'ISO File', cell: (u) => awaiting(u) ? (
-      <button onClick={() => onOpen(u.id, 'files')} title="Open File Details to upload the ISO"
-        className="inline-flex items-center gap-1.5 rounded-full border border-warn/40 bg-warn-soft px-2.5 py-0.5 text-[12px] font-medium text-warn hover:brightness-[0.97]">
-        <UploadCloud size={13} /> Upload required
-      </button>
-    ) : <Dot color="#0D9488"><span className="text-ok">Available</span></Dot> },
     { key: 'release', header: 'Release Date', cell: (u) => shortDate(u.releaseDate) },
     { key: 'eos', header: 'End of Support', cell: (u) => eosDate(u.eosDate) },
     /* Compatibility takes the slot Severity has on the patch grid — an image
@@ -83,6 +77,13 @@ export function PatchesPage({ tab, onOpen }: {
         <span className={u.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{u.approval}</span>
       </Dot>
     ) },
+    { key: 'download', header: 'Download Status', cell: (u) => awaiting(u) ? (
+      <Dot color="#D97706">
+        <button onClick={() => onOpen(u.id, 'files')} title="Open File Details to upload the ISO" className="text-warn hover:underline">
+          Awaiting Upload
+        </button>
+      </Dot>
+    ) : <Dot color="#0D9488"><span className="text-ok">{u.downloadStatus}</span></Dot> },
   ];
 
   const patchCols: Column<Patch>[] = [
