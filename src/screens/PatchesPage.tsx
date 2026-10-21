@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History } from 'lucide-react';
+import { MonitorUp, Download, RefreshCw, Columns3, FileText, Plus, ChevronDown, History, UploadCloud, X } from 'lucide-react';
 import { DataTable, Pagination, SearchBar, IdPill, type Column } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
-import { OS_UPGRADES, countsFor, type OsUpgrade } from '../data/osUpgrade';
+import { OS_UPGRADES, countsFor, needsManualUpload, type OsUpgrade } from '../data/osUpgrade';
 import { PATCHES, type Patch } from '../data/patches';
 
 /* The Patches page — the same two-tab architecture the working prototype has.
@@ -30,13 +30,20 @@ const eosDate = (d: string) => {
 const shortDate = (d: string) => d.replace(/^[A-Za-z]{3}, /, '').replace(/ \d{2}:\d{2} [AP]M$/, '');
 
 export function PatchesPage({ tab, onOpen }: {
-  tab: PatchTab; onOpen: (id: string) => void;
+  tab: PatchTab; onOpen: (id: string, tab?: string) => void;
 }) {
   const [q, setQ] = useState('');
+  const [onlyAwaiting, setOnlyAwaiting] = useState(false);
   const isUpgrades = tab === 'os-upgrades';
   const query = q.trim().toLowerCase();
 
-  const upgrades = OS_UPGRADES.filter((u) =>
+  /* Enterprise images the catalogue cannot fetch, still without an ISO. They
+     look deployable from the list otherwise, so the list says so twice: a
+     banner counting them, and a chip on each row that opens File Details. */
+  const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
+  const awaitingCount = OS_UPGRADES.filter(awaiting).length;
+
+  const upgrades = OS_UPGRADES.filter((u) => !onlyAwaiting || awaiting(u)).filter((u) =>
     !query || u.id.toLowerCase().includes(query) || u.name.toLowerCase().includes(query) ||
     u.edition.toLowerCase().includes(query) || u.osVersion.toLowerCase().includes(query));
 
@@ -51,6 +58,12 @@ export function PatchesPage({ tab, onOpen }: {
         <MonitorUp size={14} className="flex-none text-label" />{u.name}
       </button>
     ) },
+    { key: 'file', header: 'ISO File', cell: (u) => awaiting(u) ? (
+      <button onClick={() => onOpen(u.id, 'files')} title="Open File Details to upload the ISO"
+        className="inline-flex items-center gap-1.5 rounded-full border border-warn/40 bg-warn-soft px-2.5 py-0.5 text-[12px] font-medium text-warn hover:brightness-[0.97]">
+        <UploadCloud size={13} /> Upload required
+      </button>
+    ) : <Dot color="#0D9488"><span className="text-ok">Available</span></Dot> },
     { key: 'release', header: 'Release Date', cell: (u) => shortDate(u.releaseDate) },
     { key: 'eos', header: 'End of Support', cell: (u) => eosDate(u.eosDate) },
     /* Compatibility takes the slot Severity has on the patch grid — an image
@@ -136,6 +149,25 @@ export function PatchesPage({ tab, onOpen }: {
           placeholder={isUpgrades ? 'Search image, edition, version...' : 'Select field to search...'}
         />
       </div>
+
+      {isUpgrades && awaitingCount > 0 && (
+        <div className="mx-5 mb-3 flex items-center gap-2.5 rounded-lg border border-warn/30 bg-warn-soft px-4 py-2.5 text-[12.5px]">
+          <UploadCloud size={16} className="flex-none text-warn" />
+          <span className="text-value">
+            <b className="font-semibold text-warn">{awaitingCount} {awaitingCount === 1 ? 'image needs' : 'images need'} a manual ISO upload</b>
+            {' '}— Enterprise images are not downloaded automatically and cannot be deployed until the ISO is uploaded.
+          </span>
+          {onlyAwaiting ? (
+            <button onClick={() => setOnlyAwaiting(false)} className="ml-auto flex flex-none items-center gap-1 font-medium text-link hover:underline">
+              <X size={13} /> Show all
+            </button>
+          ) : (
+            <button onClick={() => setOnlyAwaiting(true)} className="ml-auto flex-none font-medium text-link hover:underline">
+              Show only these ›
+            </button>
+          )}
+        </div>
+      )}
 
       {isUpgrades
         ? <DataTable columns={upgradeCols} rows={upgrades} rowKey={(u) => u.id} empty="No OS upgrades found." />

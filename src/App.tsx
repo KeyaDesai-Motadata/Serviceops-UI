@@ -134,7 +134,7 @@ export function App() {
       {route.page === 'patches' && (
         <PatchesPage
           tab={route.tab}
-          onOpen={(id) => go({ page: 'upgrade', id })}
+          onOpen={(id, tab) => go({ page: 'upgrade', id, tab })}
         />
       )}
 

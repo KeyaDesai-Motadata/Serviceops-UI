@@ -33,6 +33,9 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
   const [drag, setDrag] = useState(false);
   const [progress, setProgress] = useState<{ name: string; pct: number; size: string } | null>(null);
   const [error, setError] = useState('');
+  /* The verified line is the upload's receipt, so it shows once, after an
+     upload here — not on every visit to an image uploaded long ago. */
+  const [justUploaded, setJustUploaded] = useState(false);
 
   const start = (f: File | undefined) => {
     if (!f) return;
@@ -45,6 +48,7 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
       if (!p) { clearInterval(t); return p; }
       if (p.pct >= 100) {
         clearInterval(t);
+        setJustUploaded(true);
         onUploaded({
           name: p.name, size: p.size, language: u.language, source: 'Manual Upload',
           uploadedBy: 'Rakesh Rathod', uploadedOn: 'Wed, Oct 21, 2026 11:40 AM',
@@ -89,7 +93,7 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         {picker}
-        {manual && (
+        {justUploaded && (
           <div className="mx-5 mt-3 flex items-center gap-2 rounded-md bg-ok-soft px-3 py-2 text-[12.5px] text-ok">
             <CheckCircle2 size={15} className="flex-none" />
             Image verified — edition ({u.edition}), build ({u.build}), architecture and language match this record. It can now be deployed.
