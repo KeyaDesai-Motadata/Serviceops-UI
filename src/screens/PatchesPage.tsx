@@ -41,7 +41,8 @@ export function PatchesPage({ tab, onOpen }: {
      Yet to Upload rather than leaving the cell blank. */
   const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
 
-  const upgrades = OS_UPGRADES.filter((u) =>
+  /* Enterprise images are kept off the list; their records stay reachable. */
+  const upgrades = OS_UPGRADES.filter((u) => u.edition !== 'Enterprise').filter((u) =>
     !query || u.id.toLowerCase().includes(query) || u.name.toLowerCase().includes(query) ||
     u.edition.toLowerCase().includes(query) || u.osVersion.toLowerCase().includes(query));
 
