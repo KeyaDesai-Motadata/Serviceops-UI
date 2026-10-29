@@ -8,6 +8,8 @@ import { EndpointDetail } from './screens/EndpointDetail';
 import { DeploymentsList } from './screens/DeploymentsList';
 import { DeploymentCreate } from './screens/DeploymentCreate';
 import { DeploymentDetail } from './screens/DeploymentDetail';
+import { AdminLayout } from './admin/AdminLayout';
+import { AdminOsUpgrade } from './admin/AdminOsUpgrade';
 
 /* Routing, the way the product works: the sidebar's Patch flyout opens one of
  * three LISTINGS, and a record is reached by clicking a row. There is no screen
@@ -19,8 +21,10 @@ import { DeploymentDetail } from './screens/DeploymentDetail';
  *   #/endpoints                endpoint listing
  *   #/endpoints/EP-16          one endpoint
  *   #/deployments              deployment listing
- *   #/deployments/new          create a run
+ *   #/deployments/new          create a run (?image=OSU-2 / ?endpoint=EP-16 prefill
+ *                              an OS Upgrade run — the records' Deploy OS Upgrade)
  *   #/deployments/PDR-2041     one run
+ *   #/admin/os-upgrade         Admin › Patch Management › OS Upgrade
  */
 
 /* A dashboard widget drills into a listing WITH a filter already applied, so the
@@ -33,17 +37,20 @@ type Route =
   | { page: 'endpoints'; os?: string }
   | { page: 'endpoint'; id: string }
   | { page: 'deployments'; filter?: string }
-  | { page: 'deployment-new' }
-  | { page: 'deployment'; id: string };
+  | { page: 'deployment-new'; image?: string; endpoint?: string }
+  | { page: 'deployment'; id: string }
+  | { page: 'admin'; module: 'os-upgrade' };
 
 function parse(hash: string): Route {
   const [path, qs] = hash.replace(/^#\/?/, '').split('?');
   const p = new URLSearchParams(qs ?? '');
   const [a, b] = path.split('/').filter(Boolean);
   if (a === 'dashboard') return { page: 'dashboard' };
+  /* Only one admin screen exists, so every admin address lands on it. */
+  if (a === 'admin') return { page: 'admin', module: 'os-upgrade' };
   if (a === 'endpoints') return b ? { page: 'endpoint', id: b } : { page: 'endpoints', os: p.get('os') ?? undefined };
   if (a === 'deployments') {
-    if (b === 'new') return { page: 'deployment-new' };
+    if (b === 'new') return { page: 'deployment-new', image: p.get('image') ?? undefined, endpoint: p.get('endpoint') ?? undefined };
     return b ? { page: 'deployment', id: b } : { page: 'deployments', filter: p.get('filter') ?? undefined };
   }
   if (a === 'patches') {
@@ -67,10 +74,11 @@ const query = (pairs: Record<string, string | undefined>) => {
 const format = (r: Route): string => {
   switch (r.page) {
     case 'dashboard': return '#/dashboard';
+    case 'admin': return `#/admin/${r.module}`;
     case 'endpoints': return `#/endpoints${query({ os: r.os })}`;
     case 'endpoint': return `#/endpoints/${r.id}`;
     case 'deployments': return `#/deployments${query({ filter: r.filter })}`;
-    case 'deployment-new': return '#/deployments/new';
+    case 'deployment-new': return `#/deployments/new${query({ image: r.image, endpoint: r.endpoint })}`;
     case 'deployment': return `#/deployments/${r.id}`;
     case 'upgrade': return `#/patches/${r.id}${query({ tab: r.tab, bucket: r.bucket, q: r.q })}`;
     default: return r.tab === 'os-upgrades' ? '#/patches/os-upgrades' : '#/patches';
@@ -82,6 +90,7 @@ const format = (r: Route): string => {
  * different values — collapsing them would leave the marker on the wrong row. */
 const moduleOf = (r: Route) =>
   r.page === 'dashboard' ? 'dashboard'
+  : r.page === 'admin' ? 'admin'
   : r.page === 'endpoints' || r.page === 'endpoint' ? 'endpoints'
   : r.page.startsWith('deployment') ? 'deployments'
   : r.page === 'upgrade' || (r.page === 'patches' && r.tab === 'os-upgrades') ? 'os-upgrades'
@@ -109,13 +118,20 @@ export function App() {
 
   const navigate = (page: string) =>
     go(page === 'dashboard' ? { page: 'dashboard' }
+      : page === 'admin' ? { page: 'admin', module: 'os-upgrade' }
       : page === 'endpoints' ? { page: 'endpoints' }
       : page === 'deployments' ? { page: 'deployments' }
       : page === 'os-upgrades' ? { page: 'patches', tab: 'os-upgrades' }
       : { page: 'patches', tab: 'patches' });
 
   return (
-    <Shell page={moduleOf(route)} onNavigate={navigate}>
+    <Shell page={moduleOf(route)} onNavigate={navigate} admin={route.page === 'admin'}>
+      {route.page === 'admin' && (
+        <AdminLayout active={route.module} onBack={() => go({ page: 'patches', tab: 'os-upgrades' })}>
+          <AdminOsUpgrade />
+        </AdminLayout>
+      )}
+
       {route.page === 'dashboard' && (
         <Dashboard
           onOpenDeployments={(active) => go({ page: 'deployments', filter: active ? 'active' : undefined })}
@@ -149,6 +165,7 @@ export function App() {
           initialQuery={route.q}
           onBack={() => go({ page: 'patches', tab: 'os-upgrades' })}
           onOpenRun={(runId) => go({ page: 'deployment', id: runId })}
+          onDeploy={(image) => go({ page: 'deployment-new', image })}
         />
       )}
 
@@ -160,6 +177,7 @@ export function App() {
         <EndpointDetail
           onBack={() => go({ page: 'endpoints' })}
           onOpenUpgrade={(id) => go({ page: 'upgrade', id })}
+          onDeploy={(endpoint, image) => go({ page: 'deployment-new', endpoint, image })}
         />
       )}
 
@@ -174,6 +192,8 @@ export function App() {
 
       {route.page === 'deployment-new' && (
         <DeploymentCreate
+          key={`${route.image ?? ''}|${route.endpoint ?? ''}`}
+          prefill={route.image || route.endpoint ? { image: route.image, endpoint: route.endpoint } : undefined}
           onBack={() => go({ page: 'deployments' })}
           onCreated={(id) => go({ page: 'deployment', id })}
         />

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Download, RefreshCw, Columns3, FileText, ChevronDown, Plus, Check } from 'lucide-react';
-import { DataTable, Pagination, SearchBar, IdPill, type Column } from '../ui/Table';
+import { DataTable, Pagination, IdPill, ListingHeader, KpiStrip, Toolbar, FilterChip, type Column, type KpiCard } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
 import { DEPLOYMENTS, type Deployment } from '../data/deployment';
 
@@ -8,7 +7,8 @@ import { DEPLOYMENTS, type Deployment } from '../data/deployment';
  *
  * The saved views are the product's, and OS Upgrade Deployments is one of them
  * — a run's Deployment Category is what the view filters on, which is why that
- * column leads the record rather than sitting among the details. */
+ * column leads the record rather than sitting among the details. In the new UI
+ * the active view's name IS the page title, with the picker behind its chevron. */
 
 /* An OS Upgrade run is ACTIVE while any endpoint is still moving — ready to
  * deploy, downloading, downloaded or in progress. A run whose header reads
@@ -18,105 +18,80 @@ const ACTIVE = ['Ready to deploy', 'Ready to Deploy', 'Downloading', 'Downloaded
 const VIEWS = [
   { id: 'all', label: 'All Deployments', match: () => true },
   { id: 'os-upgrade', label: 'OS Upgrade Deployments', match: (d: Deployment) => d.category === 'OS Upgrade' },
-  { id: 'active', label: 'Active OS Upgrade Deployments', match: (d: Deployment) => d.category === 'OS Upgrade' && ACTIVE.includes(d.status) },
+  /* Not offered in the view picker (removed 29 Oct 2026) — kept only as the
+     target of the OS Upgrade Dashboard's "Active OS Upgrade Deployments" KPI,
+     where it shows as the View chip so the list still matches the number. */
+  { id: 'active', label: 'Active OS Upgrade Deployments', hidden: true, match: (d: Deployment) => d.category === 'OS Upgrade' && ACTIVE.includes(d.status) },
   { id: 'pending', label: 'Pending', match: (d: Deployment) => d.status !== 'Completed' },
   { id: 'draft', label: 'Draft', match: (d: Deployment) => d.status === 'Draft' },
 ];
+
+/** The status palette moved to the new UI's hues; the labels are the run's own. */
+const STATUS_COLOR: Record<string, string> = {
+  'In Progress': '#F59E0B', 'Ready to Deploy': '#3D8BD0', Downloading: '#3D8BD0', Completed: '#22C55E',
+};
+export const statusColor = (d: Deployment) => STATUS_COLOR[d.status] ?? d.statusColor;
 
 export function DeploymentsList({ onOpen, onCreate, initialFilter }: {
   onOpen: (id: string) => void; onCreate: () => void; initialFilter?: string;
 }) {
   const [q, setQ] = useState('');
   const [view, setView] = useState(() => VIEWS.find((v) => v.id === initialFilter) ?? VIEWS[1]);
-  const [menu, setMenu] = useState(false);
+  const [kpi, setKpi] = useState<string | null>(null);
+
+  const KPIS: Record<string, (d: Deployment) => boolean> = {
+    'In Progress': (d) => d.status === 'In Progress' || d.status === 'Downloading',
+    'Ready to Deploy': (d) => d.status === 'Ready to Deploy',
+    'Completed': (d) => d.status === 'Completed',
+    'With Failures': (d) => d.failed > 0,
+  };
 
   const query = q.trim().toLowerCase();
-  const rows = DEPLOYMENTS.filter(view.match).filter((d) =>
+  const rows = DEPLOYMENTS.filter(view.match).filter((d) => !kpi || KPIS[kpi](d)).filter((d) =>
     !query || d.id.toLowerCase().includes(query) || d.name.toLowerCase().includes(query) ||
     d.category.toLowerCase().includes(query) || d.status.toLowerCase().includes(query));
 
+  const inView = DEPLOYMENTS.filter(view.match);
+  const cards: KpiCard[] = Object.entries(KPIS).map(([label, test]) => {
+    const hits = inView.filter(test);
+    return {
+      label, value: hits.length, active: kpi === label,
+      color: hits.length ? { 'In Progress': '#B45309', 'Ready to Deploy': '#3D8BD0', Completed: '#22A06B', 'With Failures': '#DC2626' }[label] : undefined,
+      sub: label === 'With Failures'
+        ? `${hits.reduce((s, d) => s + d.failed, 0)} endpoints failed`
+        : `${hits.reduce((s, d) => s + d.targeted, 0)} endpoints targeted`,
+      onClick: () => setKpi(kpi === label ? null : label),
+    };
+  });
+
   const cols: Column<Deployment>[] = [
-    { key: 'id', header: 'ID', cell: (d) => <button onClick={() => onOpen(d.id)}><IdPill>{d.id}</IdPill></button> },
-    { key: 'name', header: 'Name', cell: (d) => (
-      <button onClick={() => onOpen(d.id)} className="text-left hover:text-link">{d.name}</button>
-    ) },
+    { key: 'id', header: 'ID', cell: (d) => <IdPill>{d.id}</IdPill> },
+    { key: 'name', header: 'Name', cell: (d) => d.name },
     { key: 'cat', header: 'Deployment Category', cell: (d) => d.category },
-    { key: 'status', header: 'Status', cell: (d) => (
-      <Dot color={d.statusColor}><span style={{ color: d.statusColor }}>{d.status}</span></Dot>
-    ) },
+    { key: 'status', header: 'Status', cell: (d) => <Dot color={statusColor(d)}>{d.status}</Dot> },
     { key: 'policy', header: 'Deployment Policy', cell: (d) => d.policy },
     { key: 'targeted', header: 'Targeted', cell: (d) => d.targeted },
     { key: 'after', header: 'Install After', cell: (d) => d.installAfter },
     { key: 'expiry', header: 'Expiry Date', cell: (d) => d.expiryDate === '---' ? <Dash /> : d.expiryDate },
   ];
 
-  const IconBtn = ({ icon: Icon, title }: { icon: typeof Download; title: string }) => (
-    <button title={title} className="flex size-8 items-center justify-center rounded-md text-ink-soft hover:bg-strip">
-      <Icon size={15} />
-    </button>
-  );
-
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-4 border-b border-line px-5 py-3">
-        <h1 className="text-[17px] font-semibold text-ink">Patch Deployment</h1>
-
-        <div className="relative">
-          <button
-            onClick={() => setMenu((v) => !v)}
-            className="flex items-center gap-1 text-[13px] font-medium text-ink hover:text-link"
-          >
-            {view.label} <ChevronDown size={15} className="text-label" />
-          </button>
-          {menu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} />
-              <div className="absolute left-0 top-full z-50 mt-1 w-[240px] rounded-lg border border-line bg-white py-1 shadow-lg">
-                {VIEWS.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => { setView(v); setMenu(false); }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] ${
-                      v.id === view.id ? 'bg-chip font-medium text-ink' : 'text-value hover:bg-strip'
-                    }`}
-                  >
-                    <span className="w-4">{v.id === view.id && <Check size={13} />}</span>
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-1">
-          <IconBtn icon={FileText} title="Export" />
-          <IconBtn icon={Download} title="Download" />
-          <IconBtn icon={RefreshCw} title="Refresh" />
-          <IconBtn icon={Columns3} title="Columns" />
-          <button
-            onClick={onCreate}
-            className="ml-1.5 flex h-8 items-center gap-1.5 rounded-md bg-ink px-3 text-[12.5px] font-medium text-white hover:bg-ink-soft"
-          >
-            <Plus size={14} /> Create Deployment
-          </button>
-        </div>
-      </div>
-
-      {/* The active view shown as a removable chip, so what is being hidden is
-          never invisible. */}
-      {view.id !== 'all' && (
-        <div className="flex items-center gap-2 px-5 pt-3">
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-chip px-2 py-1 text-[11.5px] text-ink">
-            {view.label}
-            <button onClick={() => setView(VIEWS[0])} className="text-label hover:text-risk">×</button>
-          </span>
-        </div>
-      )}
-
-      <div className="px-5 py-3"><SearchBar value={q} onChange={setQ} /></div>
-      <DataTable columns={cols} rows={rows} rowKey={(d) => d.id} empty="No deployments found." />
-      <Pagination total={rows.length} noun="items" />
+      <ListingHeader
+        title="Patch Deployment"
+        views={VIEWS.filter((v) => !('hidden' in v && v.hidden))}
+        view={view.id}
+        onView={(id) => { setView(VIEWS.find((v) => v.id === id) ?? VIEWS[0]); setKpi(null); }}
+        cta={{ label: 'Create', onClick: onCreate }}
+      />
+      <KpiStrip cards={cards} />
+      <Toolbar search={q} onSearch={setQ} placeholder="Search deployment, category, status..." more={false}>
+        {/* The active view as a removable chip, so what is being hidden is never invisible. */}
+        {view.id !== 'all' && <FilterChip label="View" value={view.label} onClear={() => setView(VIEWS[0])} />}
+        {kpi && <FilterChip label="Showing" value={kpi} onClear={() => setKpi(null)} />}
+      </Toolbar>
+      <DataTable columns={cols} rows={rows} rowKey={(d) => d.id} onRowClick={(d) => onOpen(d.id)} empty="No deployments found." />
+      <Pagination total={rows.length} />
     </div>
   );
 }

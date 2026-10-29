@@ -1,7 +1,9 @@
+import type { LucideIcon } from 'lucide-react';
 import { useState, type ComponentType } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 
-/* The deployment Overview's cards, ported from the working prototype.
+/* The record Overview's cards, in the new UI's card style (icon tile, 15px
+ * title, View more ›).
  *
  * An OS Upgrade run gets the count-and-preview card over the overall stats
  * beside one drill-down. ⚠️ There is deliberately NO Patches card: the payload
@@ -12,16 +14,16 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 export interface StatusSplit { success: number; failed: number; inProgress: number; other: number; }
 
 export const BREAKDOWN_STATUSES = [
-  { key: 'success' as const, label: 'Success', color: '#0D9488' },
-  { key: 'failed' as const, label: 'Failed', color: '#E11D48' },
-  { key: 'inProgress' as const, label: 'In Progress', color: '#D97706' },
-  { key: 'other' as const, label: 'Other', color: '#8B93A1' },
+  { key: 'success' as const, label: 'Success', color: '#22C55E' },
+  { key: 'failed' as const, label: 'Failed', color: '#EF4444' },
+  { key: 'inProgress' as const, label: 'In Progress', color: '#F59E0B' },
+  { key: 'other' as const, label: 'Other', color: '#94A3B8' },
 ];
 
 /** Count block beside the first three records — the Overview's top row. */
 export function CountListCard({ label, icon: Icon, total, caption, items, onClick }: {
   label: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: LucideIcon;
   total: number;
   caption: string;
   items: { key: string; primary: string; secondary?: string; dot: string }[];
@@ -30,26 +32,26 @@ export function CountListCard({ label, icon: Icon, total, caption, items, onClic
   const PREVIEW = 3;
   const rest = Math.max(0, items.length - PREVIEW);
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
+    <div className="rounded-lg border border-[#e5e7eb] bg-white p-4">
       <div className="mb-3 flex items-center gap-2.5">
-        <span className="flex size-7 flex-none items-center justify-center rounded bg-chip text-ink-soft"><Icon size={15} /></span>
-        <h3 className="text-[14px] font-semibold text-ink">{label}</h3>
+        <IconTile icon={Icon} />
+        <h3 className="text-[15px] font-semibold text-ink">{label}</h3>
         {onClick && (
-          <button onClick={onClick} className="ml-auto flex items-center gap-1 text-[12.5px] font-medium text-link hover:underline">
+          <button onClick={onClick} className="ml-auto flex items-center gap-1 text-[13px] font-medium text-link hover:underline">
             View more<ChevronRight size={14} />
           </button>
         )}
       </div>
 
       <div className="flex gap-4">
-        <div className="flex w-[132px] flex-none flex-col items-center justify-center rounded-lg bg-strip px-4 py-5 text-center">
+        <div className="flex w-[132px] flex-none flex-col items-center justify-center rounded-lg bg-[#F7F9FC] px-4 py-5 text-center">
           <div className="text-[28px] font-semibold leading-none tabular-nums text-ink">{total}</div>
           <div className="mt-2 text-[12px] leading-tight text-label">{caption}</div>
         </div>
 
         <div className="min-w-0 flex-1">
           {items.slice(0, PREVIEW).map((it) => (
-            <div key={it.key} className="mb-1.5 flex items-center gap-2.5 rounded-md bg-strip px-3 py-2 last:mb-0">
+            <div key={it.key} className="mb-1.5 flex items-center gap-2.5 rounded-md bg-[#F9FAFB] px-3 py-2.5 last:mb-0">
               <span className="size-2 flex-none rounded-full" style={{ background: it.dot }} />
               <span className="min-w-0 flex-1 truncate text-[12.5px] text-value">{it.primary}</span>
               {it.secondary && <span className="flex-none text-[12px] text-label">{it.secondary}</span>}
@@ -66,16 +68,16 @@ export function CountListCard({ label, icon: Icon, total, caption, items, onClic
 
 /** One overall-status cell. `stretch` lets the 2×2 block fill the drill-down's height. */
 export const StatCard = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <div className="flex h-full flex-col justify-center rounded-lg border border-line px-4 py-3">
-    <div className="text-[12.5px] text-label">{label}</div>
-    <div className="mt-1 text-[22px] font-semibold tabular-nums" style={{ color: value > 0 ? color : '#8B93A1' }}>{value}</div>
+  <div className="flex h-full flex-col items-center justify-center rounded-lg border border-[#e5e7eb] px-4 py-6 text-center">
+    <div className="inline-flex items-center gap-1.5 text-[13px] text-label"><span className="size-2 rounded-full" style={{ background: color }} />{label}</div>
+    <div className="mt-1.5 text-[22px] font-semibold tabular-nums" style={{ color: value > 0 ? color : '#94A3B8' }}>{value}</div>
   </div>
 );
 
 /** Picker → proportional bar → tinted rows → separated total. */
 export function StatusBreakdownCard({ title, icon: Icon, data, totalLabel, allLabel }: {
   title: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: LucideIcon;
   data: Record<string, StatusSplit>;
   totalLabel: string;
   allLabel: string;
@@ -95,10 +97,10 @@ export function StatusBreakdownCard({ title, icon: Icon, data, totalLabel, allLa
   const total = d.success + d.failed + d.inProgress + d.other;
 
   return (
-    <div className="flex flex-col rounded-lg border border-line bg-white p-4">
+    <div className="flex flex-col rounded-lg border border-[#e5e7eb] bg-white p-4">
       <div className="mb-3 flex items-center gap-2.5">
-        <span className="flex size-7 flex-none items-center justify-center rounded bg-chip text-ink-soft"><Icon size={15} /></span>
-        <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
+        <IconTile icon={Icon} />
+        <h3 className="text-[15px] font-semibold text-ink">{title}</h3>
       </div>
 
       <div className="relative mb-3">
@@ -143,7 +145,7 @@ export function StatusBreakdownCard({ title, icon: Icon, data, totalLabel, allLa
               <span className="size-2 flex-none rounded-full" style={{ background: s.color }} />
               {s.label}
             </span>
-            <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: d[s.key] > 0 ? s.color : '#8B93A1' }}>
+            <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: d[s.key] > 0 ? s.color : '#94A3B8' }}>
               {d[s.key]}
             </span>
           </div>
@@ -153,6 +155,80 @@ export function StatusBreakdownCard({ title, icon: Icon, data, totalLabel, allLa
       <div className="mt-3 flex items-center justify-between border-t border-line-soft pt-3">
         <span className="text-[12.5px] font-medium text-ink">{totalLabel}</span>
         <span className="text-[15px] font-bold tabular-nums text-ink">{total}</span>
+      </div>
+    </div>
+  );
+}
+
+/** The tinted square an Overview card's icon sits in. */
+export const IconTile = ({ icon: Icon, tone = 'blue' }: { icon: LucideIcon; tone?: 'blue' | 'red' | 'violet' }) => {
+  const c = { blue: ['#EBF5FF', '#3D8BD0'], red: ['#FEF2F2', '#DC2626'], violet: ['#F3EEFF', '#7B4EFB'] }[tone];
+  return (
+    <span className="flex size-7 flex-none items-center justify-center rounded" style={{ background: c[0], color: c[1] }}>
+      <Icon size={15} />
+    </span>
+  );
+};
+
+export interface DonutSlice { label: string; value: number; color: string }
+
+/** A ring with the total in the middle. */
+export function Donut({ slices, size = 100 }: { slices: DonutSlice[]; size?: number }) {
+  const total = slices.reduce((s, x) => s + x.value, 0);
+  const r = 40, c = 2 * Math.PI * r;
+  let acc = 0;
+  return (
+    <div className="relative flex-none" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" className="size-full -rotate-90">
+        <circle cx="50" cy="50" r={r} fill="none" stroke="#E5E7EB" strokeWidth="14" />
+        {total > 0 && slices.filter((s) => s.value > 0).map((s) => {
+          const len = (s.value / total) * c;
+          const el = (
+            <circle key={s.label} cx="50" cy="50" r={r} fill="none" stroke={s.color} strokeWidth="14"
+              strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-acc}>
+              <title>{`${s.label}: ${s.value}`}</title>
+            </circle>
+          );
+          acc += len;
+          return el;
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[20px] font-semibold leading-none tabular-nums text-ink">{total}</span>
+        <span className="mt-1 text-[11px] text-label">Total</span>
+      </div>
+    </div>
+  );
+}
+
+/* The new UI's donut card: icon tile + title + View more, then the ring beside
+ * its legend — the record Overview's Endpoints / Deployments cards. */
+export function DonutCard({ icon, tone, label, slices, onOpen }: {
+  icon: LucideIcon; tone?: 'blue' | 'red' | 'violet';
+  label: string; slices: DonutSlice[]; onOpen?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-[#e5e7eb] bg-white p-4">
+      <div className="mb-3 flex items-center gap-2.5">
+        <IconTile icon={icon} tone={tone} />
+        <h3 className="text-[13px] text-ink">{label}</h3>
+        {onOpen && (
+          <button onClick={onOpen} className="ml-auto flex items-center gap-1 text-[13px] font-medium text-link hover:underline">
+            View more<ChevronRight size={14} />
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-5">
+        <Donut slices={slices} />
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          {slices.map((s) => (
+            <div key={s.label} className="flex items-center gap-2 text-[13px]">
+              <span className="size-2.5 flex-none rounded-full" style={{ background: s.color }} />
+              <span className="text-label">{s.label}</span>
+              <span className="ml-auto font-medium tabular-nums text-ink">{s.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

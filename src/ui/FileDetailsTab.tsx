@@ -71,7 +71,6 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
     { key: 'name', header: 'File Name', cell: (f) => f.name },
     { key: 'size', header: 'Size', cell: (f) => f.size },
     { key: 'lang', header: 'Language', cell: (f) => f.language },
-    { key: 'src', header: 'Source', cell: (f) => f.source },
     { key: 'by', header: 'Uploaded By', cell: (f) => f.uploadedBy },
     { key: 'on', header: 'Uploaded On', cell: (f) => f.uploadedOn },
     { key: 'actions', header: 'Actions', width: 110, cell: (f) => (
@@ -94,7 +93,7 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
       <div className="flex min-h-0 flex-1 flex-col">
         {picker}
         {justUploaded && (
-          <div className="mx-5 mt-3 flex items-center gap-2 rounded-md bg-ok-soft px-3 py-2 text-[12.5px] text-ok">
+          <div className="mx-6 mt-4 flex items-center gap-2 rounded-md bg-ok-soft px-3 py-2 text-[12.5px] text-ok">
             <CheckCircle2 size={15} className="flex-none" />
             Image verified — edition ({u.edition}), build ({u.build}), architecture and language match this record. It can now be deployed.
           </div>
@@ -106,7 +105,7 @@ export function FileDetailsTab({ u, file, manual, onUploaded, onRemove }: {
 
   // ── awaiting upload / uploading ───────────────────────────────────────────
   return (
-    <div className="scroll-y min-h-0 flex-1 px-5 py-4">
+    <div className="scroll-y min-h-0 flex-1 px-6 py-6">
       {picker}
 
       {/* Why: said once, plainly, with where to get the file. */}

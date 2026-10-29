@@ -1,10 +1,64 @@
-# OS Upgrade UI
+# OS Upgrade UI — new ServiceOps look
 
-A design prototype of **OS Upgrade** in Motadata ServiceOps, built in the
-product's own UI language — icon rail, dark pill tabs, key-field grids, the
-"Other Info" rail and the product's pagination.
+The OS Upgrade prototype (`../os-upgrade-ui`) rebuilt in the **new ServiceOps UI**
+(`../serviceops-ticket-detail`): the grey icon rail with hover flyouts, the
+logo + search top bar, List + KPI listing pages with uppercase grids and blue id
+pills, and record pages with a record tab, a one-line header KPI row, blue
+underline tabs and a searchable **Properties** panel with the Ask AI box.
 
-**Live:** https://keyadesai-motadata.github.io/Serviceops-UI/
+**Data is unchanged.** `src/data/` is a byte-for-byte copy of the old app's, so
+every image, endpoint, deployment, prerequisite and dashboard figure is the same.
+Only the UI layer (`src/ui/`, `src/screens/`) was redone. The old key-field grid
+and "Other Info" rail are folded into the Properties panel — every field is
+still there.
+
+The old app is untouched and still the one that is live at
+https://keyadesai-motadata.github.io/Serviceops-UI/. This folder has no git repo
+and no deploy workflow yet.
+
+## Admin › Patch Management › OS Upgrade
+
+Opened from the header **gear** (`#/admin/os-upgrade`). "Back to app" returns.
+
+- **No pre-built catalogue** — a list of Windows versions would need syncing on
+  every Microsoft release; only created OS upgrades appear. Two example records
+  show the two outcomes: OSU-1 **Uploaded**, OSU-2 **Validation Failed** (its ISO
+  is English International, the record says English US).
+- Dropdowns: **Operating System** = Windows 11 / Windows 10 only; **Edition** =
+  every client edition except the Enterprise family (Home, Home N, Home Single
+  Language, Pro, Pro N, Pro Education (N), Pro for Workstations (N), Education
+  (N) — no SE, which has no ISO); **Language** = English only — English (US) en-US, English
+  (International) en-GB. No Build column.
+- **Create OS Upgrade** = **Name** (the admin's own label, not checked) then the
+  fields an ISO records about itself, each checked after upload
+  (`src/admin/isoVerify.ts`):
+
+  | Field | Read from the ISO |
+  | --- | --- |
+  | Operating System | `install.wim` image name / installation type |
+  | Version (24H2…) | `DisplayVersion` (or `ReleaseId`) in the image's offline registry |
+  | Edition | `EditionID` of each WIM index — any index satisfies a multi-edition ISO |
+  | Architecture | WIM architecture |
+  | Language | WIM default language |
+
+- The ISO field is the module's own: "Choose files (or) Drop here" + Browse,
+  then a file chip. **Create closes the panel and adds the row at once**; the
+  ROW carries the upload (% · bar · "X of Y · ETA", Pause / Resume / Stop).
+- **Upload Status** = the module's words — **In Progress · Paused · Uploaded ·
+  Failed** — plus **Validation Failed** for an ISO that arrived but doesn't match
+  the details (with which field and what the ISO has). The product has no
+  mismatch status; its nearest is `DownloadStatus.CHECKSUM_FAILD` ("Checksum
+  Failed", beside plain FAILED), and this follows that "<check> Failed" pattern.
+  Checking the ISO shows as In Progress ("Validating the ISO…"); Stop ends as
+  Failed ("Upload stopped").
+- **Clicking a row reopens the same form**, filled in, with the row's live Upload
+  Status (and Pause/Stop while it transfers). Update: a new ISO uploads again;
+  changed details on the same ISO are validated again.
+- The **Windows File Server required to upload** notice sits in the ISO File
+  section, directly above the drop zone.
+- Mock: the upload is simulated and the ISO's metadata is inferred from the
+  FILE NAME (e.g. `Win11_24H2_English_x64.iso` → Windows 11 24H2, consumer
+  editions, en-US, x64). The backend would run `DISM /Get-WimInfo` instead.
 
 ## Screens
 
@@ -38,7 +92,7 @@ rail and pick a sub-module. Records open by clicking a row.
 
 ```
 pnpm install
-pnpm dev      # http://localhost:5174
+pnpm dev      # http://localhost:5175
 pnpm build
 ```
 

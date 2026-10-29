@@ -13,23 +13,30 @@ import { OS_UPGRADES } from '../data/osUpgrade';
  * afterwards — picking a second replaces the first.
  */
 
-type Category = 'Patch' | 'OS Upgrade';
+type Category = 'Patches' | 'OS Upgrade';
 
 const Label = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
-  <label className="mb-1.5 block text-[12px] text-label">
+  <label className="mb-1.5 block text-[13px] text-[#364658]">
     {children}{required && <span className="ml-0.5 text-risk">*</span>}
   </label>
 );
 
-const field = 'h-9 w-full rounded-md border border-line bg-white px-2.5 text-[12.5px] text-value focus:border-link focus:outline-none';
+const field = 'h-8 w-full rounded border border-[#DFE5ED] bg-white px-2.5 text-[13px] text-value focus:border-link focus:outline-none focus:ring-1 focus:ring-[#3D8BD0]';
 
-export function DeploymentCreate({ onBack, onCreated }: { onBack: () => void; onCreated: (id: string) => void }) {
+export function DeploymentCreate({ onBack, onCreated, prefill }: {
+  onBack: () => void; onCreated: (id: string) => void;
+  /* Set by a record's "Deploy OS Upgrade": an OS Upgrade run for that image
+     (from the OS upgrade page) or for that machine (from the endpoint page),
+     instead of the worked example the listing's Create opens on. */
+  prefill?: { image?: string; endpoint?: string };
+}) {
+  const prefillImage = prefill?.image ? OS_UPGRADES.find((u) => u.id === prefill.image) : undefined;
   const [category, setCategory] = useState<Category>('OS Upgrade');
-  const [name, setName] = useState('Windows 11 25H2 — Finance rollout');
-  const [image, setImage] = useState<string | null>('OSU-1');
+  const [name, setName] = useState(prefill ? (prefillImage ? `${prefillImage.name} rollout` : '') : 'Windows 11 25H2 — Finance rollout');
+  const [image, setImage] = useState<string | null>(prefill ? prefillImage?.id ?? null : 'OSU-1');
   const [picking, setPicking] = useState(false);
-  const [endpoints, setEndpoints] = useState(['EP-408', 'EP-406', 'EP-400']);
-  const [offices, setOffices] = useState(['Ahmedabad HQ']);
+  const [endpoints, setEndpoints] = useState(prefill ? (prefill.endpoint ? [prefill.endpoint] : []) : ['EP-408', 'EP-406', 'EP-400']);
+  const [offices, setOffices] = useState(prefill ? [] as string[] : ['Ahmedabad HQ']);
 
   const picked = OS_UPGRADES.find((u) => u.id === image) ?? null;
 
@@ -38,8 +45,8 @@ export function DeploymentCreate({ onBack, onCreated }: { onBack: () => void; on
   const deployable = OS_UPGRADES.filter((u) => u.downloadStatus === 'Success');
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <section className="border-b border-line px-5 py-5 last:border-0">
-      <h2 className="mb-4 text-[13.5px] font-semibold text-ink">{title}</h2>
+    <section className="mb-4 rounded-lg border border-[#e5e7eb] bg-white px-5 py-4">
+      <h2 className="mb-4 text-[15px] font-semibold text-ink">{title}</h2>
       {children}
     </section>
   );
@@ -53,24 +60,24 @@ export function DeploymentCreate({ onBack, onCreated }: { onBack: () => void; on
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-line px-5 py-3">
-        <button onClick={onBack} className="flex size-7 items-center justify-center rounded text-ink-soft hover:bg-strip">
+      <div className="flex flex-none items-center gap-3 border-b border-[#e5e7eb] px-6 py-3">
+        <button onClick={onBack} title="Back to Patch Deployment" className="flex size-8 items-center justify-center rounded border border-[#DFE5ED] text-ink-soft hover:bg-[#F5F7FA]">
           <ChevronLeft size={18} />
         </button>
-        <h1 className="text-[16px] font-semibold text-ink">Create Patch Deployment</h1>
+        <h1 className="text-[18px] font-semibold text-ink">Create Patch Deployment</h1>
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={onBack} className="h-8 rounded-md border border-line px-3 text-[12.5px] font-medium text-ink-soft hover:bg-strip">Cancel</button>
+          <button onClick={onBack} className="h-8 rounded border border-[#DFE5ED] px-3.5 text-[13px] font-medium text-ink hover:bg-[#F5F7FA]">Cancel</button>
           <button
             onClick={() => onCreated('PDR-2041')}
             disabled={!name.trim() || (category === 'OS Upgrade' && !image)}
-            className="flex h-8 items-center gap-1.5 rounded-md bg-ink px-3 text-[12.5px] font-medium text-white enabled:hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 items-center gap-1.5 rounded-md bg-[#3D8BD0] px-3.5 text-[13px] font-medium text-white enabled:hover:bg-[#2d6ca0] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Check size={14} /> Create Deployment
           </button>
         </div>
       </div>
 
-      <div className="scroll-y min-h-0 flex-1">
+      <div className="scroll-y min-h-0 flex-1 bg-[#F7F9FC] px-6 py-5">
         <Section title="Deployment Details">
           <div className="grid max-w-[980px] grid-cols-3 gap-x-6 gap-y-4">
             <div className="col-span-2">
@@ -81,7 +88,7 @@ export function DeploymentCreate({ onBack, onCreated }: { onBack: () => void; on
               {/* The field the form turns on. */}
               <Label required>Deployment Category</Label>
               <select value={category} onChange={(e) => setCategory(e.target.value as Category)} className={field}>
-                <option>Patch</option>
+                <option>Patches</option>
                 <option>OS Upgrade</option>
               </select>
             </div>

@@ -1,36 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ── Tokens, read off the product screenshots ──────────────────────────────
+/* ── Tokens, taken from the new ServiceOps UI (serviceops-ticket-detail) ────
  *
- * The product's own palette, not an invented one. `ink` is the near-black the
- * active tab pill, the left-nav selection and the primary button all share —
- * in this UI "selected" and "primary" are the SAME fill, which is why it is one
- * token rather than two. */
+ * The token NAMES are the old prototype's, so every screen keeps reading
+ * `text-ink` / `bg-strip` / `text-ok`; only the values moved to the new UI's
+ * palette — slate text, the #3D8BD0 product blue, and its green / red / amber
+ * status hues. */
 @theme {
-  --color-ink:        #16202B;
-  --color-ink-soft:   #2B3949;
-  --color-label:      #6B7280;
-  --color-value:      #1F2937;
+  --color-ink:        #364658;
+  --color-ink-soft:   #64748B;
+  --color-label:      #7B8FA5;
+  --color-value:      #364658;
   --color-line:       #E5E7EB;
-  --color-line-soft:  #EEF1F5;
+  --color-line-soft:  #F0F2F5;
   --color-canvas:     #FFFFFF;
-  --color-strip:      #F6F7F9;
-  --color-chip:       #EEF1F5;
-  --color-link:       #2563EB;
-  /* ⚠️ Status hues are VALIDATED, not chosen by eye. The obvious green/red pair
-   * (#16A34A / #DC2626) separates at only ΔE 5.0 for deuteranopia — the two most
-   * important states on this product were near-identical to a red-green colour
-   * blind reader wherever they sat as adjacent fills in a stacked bar. Teal and
-   * rose clear it at ΔE 9.4 and all three pass the contrast floor.
-   * Re-run before changing: scripts/validate_palette.js "#0D9488,#E11D48,#D97706" */
-  --color-ok:         #0D9488;
-  --color-ok-soft:    #E3F4F2;
-  --color-risk:       #E11D48;
-  --color-risk-soft:  #FDE9EE;
+  --color-strip:      #F9FAFB;
+  --color-chip:       #EEF2F6;
+  --color-link:       #3D8BD0;
+  --color-link-soft:  #E8F4FD;
+  --color-ok:         #22A06B;
+  --color-ok-soft:    #E7F6EE;
+  --color-risk:       #DC2626;
+  --color-risk-soft:  #FEF2F2;
   --color-warn:       #D97706;
-  --color-warn-soft:  #FEF3E2;
-  /* Not a series colour — the "absent / not applicable" fill. Always direct-labelled. */
-  --color-none:       #8B93A1;
+  --color-warn-soft:  #FFF7E6;
+  /* The "absent / not applicable" fill. Always direct-labelled. */
+  --color-none:       #94A3B8;
 }
 
 html, body, #root { height: 100%; }
@@ -38,14 +34,12 @@ body {
   margin: 0;
   background: #fff;
   color: var(--color-value);
-  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
 }
-/* ⚠️ ONLY cursor here. `font: inherit` and `color: inherit` are plain declarations that come
- * after the Tailwind import, so they beat every `text-*` utility on a <button> at equal
- * specificity — which silently painted the active pill's label dark-on-dark and reset button
- * font sizes. Tailwind's own preflight already normalises button font and color. */
+/* ⚠️ ONLY cursor here. `font: inherit` and `color: inherit` would beat every
+ * `text-*` utility on a <button> at equal specificity. */
 button { cursor: pointer; }
 
 /* Auto-hiding scrollbars, as the product has. */

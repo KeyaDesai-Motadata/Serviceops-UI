@@ -17,8 +17,8 @@ export interface InstallRow {
 }
 
 const STATUS: Record<string, string> = {
-  Success: '#0D9488', Installed: '#0D9488', Failed: '#E11D48',
-  'In Progress': '#D97706', Pending: '#D97706', 'Not Ready': '#64748B', 'Yet to Receive': '#8B93A1',
+  Success: '#22C55E', Installed: '#22C55E', Failed: '#EF4444',
+  'In Progress': '#F59E0B', Pending: '#F59E0B', 'Not Ready': '#64748B', 'Yet to Receive': '#94A3B8',
 };
 
 export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload }: {
@@ -42,7 +42,7 @@ export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload
   const patchCols: Column<InstallRow>[] = [
     { key: 'id', header: 'Endpoint ID', cell: (r) => (
       <span className="flex items-center gap-2">
-        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#0D9488' : '#EAB308' }} />
+        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#22C55E' : '#EAB308' }} />
         <IdPill>{r.id}</IdPill>
       </span>
     ) },
@@ -77,7 +77,7 @@ export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload
   const recordCols: Column<InstallRow>[] = [
     { key: 'id', header: 'Endpoint ID', cell: (r) => (
       <span className="flex items-center gap-2">
-        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#0D9488' : '#EAB308' }} />
+        <span className="size-2 flex-none rounded-full" style={{ background: r.online ? '#22C55E' : '#EAB308' }} />
         <IdPill>{r.id}</IdPill>
       </span>
     ) },
@@ -105,7 +105,7 @@ export function InstallationTab({ rows, matrix = false, onViewConfig, onDownload
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="px-5 py-3"><SearchBar value={q} onChange={setQ} /></div>
+      <div className="px-6 pb-3 pt-4"><SearchBar value={q} onChange={setQ} /></div>
       <DataTable columns={matrix ? patchCols : recordCols} rows={visible} rowKey={(r) => r.id} empty="No installations found." selectable={false} />
       <Pagination total={visible.length} noun="items" />
     </div>

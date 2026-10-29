@@ -18,7 +18,7 @@ export function installRowsFor(u: OsUpgrade): InstallRow[] {
         installStatus,
         retry: installStatus === 'Failed' ? (i % 2) + 1 : 0,
         downloadStatus: installStatus === 'Not Ready' ? 'Pending' : 'Success',
-        taskType: 'Auto Patch Deploy Task',
+        taskType: 'Manual Remote Deploy',
         online: installStatus !== 'Not Ready',
       };
     });

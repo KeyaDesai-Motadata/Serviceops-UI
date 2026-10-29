@@ -89,7 +89,7 @@ export function PickerDrawer({ open, title, subtitle, rows, selected, single = f
                 }`}
               >
                 <span className={`flex size-4 flex-none items-center justify-center rounded border ${
-                  on ? 'border-ink bg-ink text-white' : 'border-line'}`}>
+                  on ? 'border-[#3D8BD0] bg-[#3D8BD0] text-white' : 'border-line'}`}>
                   {on && <Check size={11} />}
                 </span>
                 <IdPill>{r.id}</IdPill>
@@ -114,7 +114,7 @@ export function PickerDrawer({ open, title, subtitle, rows, selected, single = f
             </button>
             <button
               onClick={() => { onApply(picked); onClose(); }}
-              className="h-8 rounded-md bg-ink px-3 text-[12.5px] font-medium text-white hover:bg-ink-soft"
+              className="h-8 rounded bg-[#3D8BD0] px-3.5 text-[13px] font-medium text-white hover:bg-[#2d6ca0]"
             >
               Add
             </button>

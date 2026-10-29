@@ -65,8 +65,8 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Header: title, dashboard picker, then range + controls + Manage. */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
-        <h1 className="text-[17px] font-semibold text-ink">Dashboard</h1>
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-6 py-3">
+        <h1 className="text-[18px] font-semibold text-ink">Dashboard</h1>
         <div className="relative">
           <select
             value={dash} onChange={(e) => setDash(e.target.value)}
@@ -81,7 +81,7 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
           <span className="mr-1 text-[12.5px] text-label">{RANGE}</span>
           <IconBtn icon={Filter} title="Filter" />
           <IconBtn icon={RefreshCw} title="Refresh" />
-          <button className="flex h-8 items-center rounded-md bg-ink px-3 text-[12.5px] font-medium text-white hover:bg-ink-soft">
+          <button className="flex h-8 items-center rounded bg-[#3D8BD0] px-3.5 text-[13px] font-medium text-white hover:bg-[#2d6ca0]">
             Manage Dashboard
           </button>
           <IconBtn icon={Download} title="Download" />
@@ -90,7 +90,7 @@ export function Dashboard({ onOpenDeployments, onOpenEndpoints, onOpenCompatibil
         </div>
       </div>
 
-      <div className="scroll-y min-h-0 flex-1 px-5 py-4">
+      <div className="scroll-y min-h-0 flex-1 bg-[#F7F9FC] px-6 py-5">
         {/* ── The three KPIs ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3">
           <KpiTile
