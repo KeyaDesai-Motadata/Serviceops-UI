@@ -21,8 +21,8 @@ import { byId, eligibleFor, countsFor, needsManualUpload, type Evaluated } from 
  * by hand, and until it is, every place that names the file says so and points
  * at that tab.
  *
- * ⚠️ An OS upgrade has NO approval and NO audit trail: no Approve / Decline,
- * no Approval Status / Approved By / Approved On, and no Audit Trail tab. */
+ * ⚠️ An OS upgrade has NO Approve / Decline action and NO Audit Trail tab. Its
+ * approval details (Approval Status, Approved By, Approved On) are shown, read-only. */
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
@@ -104,6 +104,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
             { label: 'Upload Status', value: awaiting
               ? <button onClick={() => setTab('files')} className="text-warn hover:underline">Yet to Upload</button>
               : <span className="text-ok">Uploaded</span> },
+            { label: 'Approval Status', value: <Dot color={u.approval === 'Approved' ? '#22C55E' : '#F59E0B'}><span className={u.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{u.approval}</span></Dot> },
             { label: 'Release Date', value: u.releaseDate.replace(/^[A-Za-z]{3}, /, '').replace(/ \d{2}:\d{2} [AP]M$/, '') },
             { label: 'End of Support', value: u.eosDate },
           ]}
@@ -125,6 +126,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
               fields: [
                 { label: 'Patch Category', value: 'OS Upgrade' },
                 { label: 'Platform', value: u.family },
+                { label: 'Approval Status', value: <Dot color={u.approval === 'Approved' ? '#22C55E' : '#F59E0B'}><span className={u.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{u.approval}</span></Dot> },
                 { label: 'KB Number', value: u.kb },
                 { label: 'Release Date', value: u.releaseDate.replace(/^[A-Za-z]{3}, /, '') },
                 { label: 'End of Support', value: u.eosDate },
@@ -151,6 +153,8 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
                 { label: 'Download Size', value: file ? file.size : <Dash /> },
                 { label: 'Reboot Required', value: u.rebootRequired },
                 { label: 'Support Uninstallation', value: 'No' },
+                { label: 'Approved By', value: u.approval === 'Approved' ? 'Rakesh Rathod' : <Dash /> },
+                { label: 'Approved On', value: u.approval === 'Approved' ? 'Mon, Sep 21, 2026 05:31 PM' : <Dash /> },
                 { label: 'Patch Type', value: 'OS Upgrade' },
                 { label: 'Created Date', value: 'Mon, Sep 21, 2026 05:24 PM' },
                 { label: 'Last Updated Date', value: 'Thu, Sep 24, 2026 09:12 AM' },

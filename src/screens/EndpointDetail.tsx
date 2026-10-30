@@ -69,9 +69,8 @@ export function EndpointDetail({ onBack, onOpenUpgrade, onDeploy }: {
     { key: 'size', header: 'Download Size', cell: (r) => r.size },
     { key: 'uuid', header: 'UUID', cell: (r) => <span className="block max-w-[220px] truncate">{r.uuid}</span> },
   ];
-  /* An OS upgrade carries no severity and no approval, so the OS Upgrade tab
-     drops both columns. */
-  const cols = tab === 'os-upgrade' ? allCols.filter((c) => c.key !== 'sev' && c.key !== 'appr') : allCols;
+  /* An OS upgrade carries no severity, so the OS Upgrade tab drops that column. */
+  const cols = tab === 'os-upgrade' ? allCols.filter((c) => c.key !== 'sev') : allCols;
 
   return (
     <RecordPage

@@ -1,10 +1,10 @@
 /* Patch Deployment mock data — the run, and the endpoints it targeted.
  *
- * A deployment carries a Deployment Category: Patches or OS Upgrade. That one
+ * A deployment carries a Deployment Category: Patch Installation or OS Upgrade. That one
  * field decides what the run delivers, and therefore what every other field on
  * the page means, which is why it leads the record. */
 
-export type DeploymentCategory = 'Patches' | 'OS Upgrade';
+export type DeploymentCategory = 'Patch Installation' | 'OS Upgrade';
 
 export interface Deployment {
   id: string;
@@ -76,7 +76,7 @@ export const DEPLOYMENTS: Deployment[] = [
     targeted: 31, success: 29, failed: 2, inProgress: 0,
   },
   {
-    id: 'PDR-2029', name: 'September security rollup', category: 'Patches',
+    id: 'PDR-2029', name: 'September security rollup', category: 'Patch Installation',
     status: 'Completed', statusColor: '#0D9488',
     policy: 'Production Endpoints — Staged Rollout',
     installAfter: 'Tue, Sep 08, 2026 10:00 PM', expiryDate: 'Tue, Sep 22, 2026 11:59 PM',

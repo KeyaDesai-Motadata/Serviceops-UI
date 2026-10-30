@@ -6,9 +6,8 @@ import { UploadCloud, Server, Paperclip, Trash2, AlertCircle, ExternalLink } fro
  * a grey dashed box — "Choose files (or) Drop here" + Browse — and, once a file
  * is chosen, the file as a chip with a remove button.
  *
- * Choosing a file does NOT send it. The transfer starts on Create and runs in
- * the new row of the listing (progress, pause/stop, then the ISO check), so a
- * 5 GB upload never holds the panel open.
+ * Choosing a file starts the upload in the form itself (progress, pause/stop),
+ * then the ISO check; a mismatch is a validation error on the form.
  *
  * ⚠️ The Windows File Server notice sits directly ABOVE the box, at the upload
  * itself: the file is stored on and distributed from that server. */
@@ -139,9 +138,9 @@ export function IsoPicker({ value, onChange, note, size }: {
         </div>
       )}
 
-      {value && note !== null && (
+      {value && note && (
         <p className="mt-2 text-[12px] text-[#7B8FA5]">
-          {note ?? 'The upload starts when you click Create and continues in the list — you can keep working while it runs.'}
+          {note}
         </p>
       )}
 

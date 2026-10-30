@@ -13,7 +13,7 @@ import { OS_UPGRADES } from '../data/osUpgrade';
  * afterwards — picking a second replaces the first.
  */
 
-type Category = 'Patches' | 'OS Upgrade';
+type Category = 'Patch Installation' | 'OS Upgrade';
 
 const Label = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
   <label className="mb-1.5 block text-[13px] text-[#364658]">
@@ -88,7 +88,7 @@ export function DeploymentCreate({ onBack, onCreated, prefill }: {
               {/* The field the form turns on. */}
               <Label required>Deployment Category</Label>
               <select value={category} onChange={(e) => setCategory(e.target.value as Category)} className={field}>
-                <option>Patches</option>
+                <option>Patch Installation</option>
                 <option>OS Upgrade</option>
               </select>
             </div>

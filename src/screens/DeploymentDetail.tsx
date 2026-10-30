@@ -182,10 +182,9 @@ export function DeploymentDetail({ id, onBack, onOpenUpgrade }: {
               { key: 'cat', header: 'Patch Category', cell: () => d.category },
               { key: 'rel', header: 'Release Date', cell: () => img.releaseDate.replace(/^[A-Za-z]{3}, /, '') },
               { key: 'size', header: 'Download Size', cell: () => img.size },
-              /* An OS image carries no approval; only a Patch run lists one. */
-              ...(d.category === 'OS Upgrade' ? [] : [{ key: 'appr', header: 'Approval Status', cell: () => (
+              { key: 'appr', header: 'Approval Status', cell: () => (
                 <span className={img.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{img.approval}</span>
-              ) }]),
+              ) },
             ]}
             rows={[d]}
             rowKey={(r) => r.payloadId}

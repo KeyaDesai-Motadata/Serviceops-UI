@@ -1,66 +1,34 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
-  Plus, Search, X, ExternalLink, CheckCircle2, Trash2, MonitorUp, Pause, Play, Square, RotateCcw, Upload,
+  Plus, Search, X, ExternalLink, CheckCircle2, Trash2, MonitorUp, Pause, Play, Square, RotateCcw, AlertCircle, Loader2,
 } from 'lucide-react';
 import { Pagination, IdPill } from '../ui/Table';
-import { IsoPicker, ProgressBar, formatBytes, formatEta, validateIso } from './IsoUploader';
+import { IsoPicker, ProgressBar, formatBytes, formatEta } from './IsoUploader';
 import {
   OS_FAMILIES, ARCHITECTURES, LANGUAGES, editionsFor, languageLabel,
-  detectFromFileName, compare, type Declared,
+  detectFromFileName, compare, type Declared, type Detected,
 } from './isoVerify';
 
 /* Admin › Patch Management › OS Upgrade.
  *
  * ⚠️ There is NO pre-built catalogue. A list of Windows versions would have to be
- * synced every time Microsoft ships one, so the page starts EMPTY and holds only
- * the OS upgrades an admin has created.
+ * synced every time Microsoft ships one, so the page holds only the OS upgrades
+ * an admin has created.
  *
- * Create OS Upgrade collects the details and the chosen ISO, and closes. The
- * record is added AT ONCE and its ROW carries the upload, as the module's own
- * ISO upload does. Clicking a row opens the same form again, filled in, with
- * that row's live upload status.
- *
- * Upload Status uses the module's words — In Progress · Paused · Uploaded ·
- * Failed — plus ONE status for an ISO that arrived but does not match the
- * details entered: **Validation Failed**. The product has no mismatch status;
- * the nearest is DownloadStatus.CHECKSUM_FAILD ("Checksum Failed"), a separate
- * "<check> Failed" value beside plain FAILED, and this follows that pattern.
- * Checking the ISO after the transfer is still In Progress ("Validating the
- * ISO…"), not a status of its own, and Stop ends as Failed ("Upload stopped").
- */
-
-/** `validating` is shown as In Progress — it is a phase, not a status. */
-type Phase = 'uploading' | 'validating' | 'paused' | 'uploaded' | 'failed' | 'validation-failed';
+ * The ISO uploads and is validated INSIDE the form (30 Oct 2026). Choosing a file
+ * starts the upload there; once it arrives the ISO is read and checked against
+ * the details entered. A mismatch is a validation error on the form — the
+ * fields that disagree are marked — and Create / Update stays disabled until
+ * the details or the ISO are fixed. So every listed record has a valid ISO, and
+ * the list carries no Upload Status. */
 
 interface AdminImage {
   id: string; name: string; declared: Declared;
-  file: File; loaded: number; rate: number; phase: Phase;
-  /** Why a row stopped short of Uploaded. */
-  reason?: string;
-  /** When a validating row gets its answer (the server mounts the WIM first). */
-  verifyAt?: number;
-  uploadedOn: string | null;
-  /** Size to show when the File is only a stand-in (the two example records). */
+  file: File;
+  /** Size to show when the File is only a stand-in (the example records). */
   bytes?: number;
+  uploadedOn: string;
 }
-
-type UploadStatus = 'In Progress' | 'Paused' | 'Uploaded' | 'Failed' | 'Validation Failed';
-
-const statusOf = (p: Phase): UploadStatus =>
-  p === 'uploading' || p === 'validating' ? 'In Progress'
-  : p === 'paused' ? 'Paused'
-  : p === 'uploaded' ? 'Uploaded'
-  : p === 'failed' ? 'Failed'
-  : 'Validation Failed';
-
-/* The module's own tones (UPLOAD_TONE in the new UI's OsUpgradeUpload.tsx). */
-const TONE: Record<UploadStatus, { fg: string; bg: string }> = {
-  'In Progress': { fg: '#3D8BD0', bg: '#EBF5FF' },
-  'Paused': { fg: '#B45309', bg: '#FFFAEB' },
-  'Uploaded': { fg: '#22A06B', bg: '#ECFDF3' },
-  'Failed': { fg: '#DC2626', bg: '#FEF3F2' },
-  'Validation Failed': { fg: '#DC2626', bg: '#FEF3F2' },
-};
 
 const nowStamp = () => {
   const d = new Date();
@@ -69,68 +37,14 @@ const nowStamp = () => {
   return `${String(d.getDate()).padStart(2, '0')} ${mon} ${d.getFullYear()}, ${t}`;
 };
 
-/* The demo files are tiny, so a transfer is scaled to take ~6 seconds whatever
-   its size. A file named *fail* / *corrupt* drops at 62% — the only way to
-   reach Failed from the UI. */
-const startTransfer = (file: File) => ({
-  file, loaded: 0, rate: Math.max(file.size / 6, 1), phase: 'uploading' as Phase,
-  reason: undefined, uploadedOn: null, bytes: undefined,
-});
-
-/** Check the file again without re-sending it — when only the details changed. */
-const revalidate = () => ({ phase: 'validating' as Phase, verifyAt: Date.now() + 1500, reason: undefined, uploadedOn: null });
-
-/* Two example records so the list shows both outcomes: one ISO that matched,
-   and one that arrived but failed validation. The failed one's reason is
-   computed by the same check a real upload runs, so the two cannot disagree. */
 const GB = 1024 ** 3;
-const example = (id: string, name: string, declared: Declared, fileName: string, bytes: number, uploadedOn: string): AdminImage => {
-  const file = new File([], fileName);
-  const off = compare(declared, detectFromFileName(fileName)).filter((c) => !c.ok);
-  return {
-    id, name, declared, file, bytes, loaded: 0, rate: 1,
-    phase: off.length ? 'validation-failed' : 'uploaded',
-    reason: off.length ? `The ISO doesn't match — ${off.map((c) => `${c.label}: ISO has ${c.found}, entered ${c.declared}`).join(' · ')}` : undefined,
-    uploadedOn: off.length ? null : uploadedOn,
-  };
-};
+/* Two example records, both valid — an invalid ISO can no longer be saved. */
 const EXAMPLES: AdminImage[] = [
-  example('OSU-2', 'Windows 10 22H2 Education', { os: 'Windows 10', version: '22H2', edition: 'Education', arch: 'x64', language: 'en-US' },
-    'Win10_22H2_EnglishInternational_x64.iso', 5.8 * GB, ''),
-  example('OSU-1', 'Windows 11 24H2 Pro', { os: 'Windows 11', version: '24H2', edition: 'Pro', arch: 'x64', language: 'en-US' },
-    'Win11_24H2_English_x64.iso', 5.4 * GB, '28 Oct 2026, 11:42 AM'),
+  { id: 'OSU-2', name: 'Windows 10 22H2 Education', declared: { os: 'Windows 10', version: '22H2', edition: 'Education', arch: 'x64', language: 'en-GB' },
+    file: new File([], 'Win10_22H2_EnglishInternational_x64.iso'), bytes: 5.8 * GB, uploadedOn: '27 Oct 2026, 04:15 PM' },
+  { id: 'OSU-1', name: 'Windows 11 24H2 Pro', declared: { os: 'Windows 11', version: '24H2', edition: 'Pro', arch: 'x64', language: 'en-US' },
+    file: new File([], 'Win11_24H2_English_x64.iso'), bytes: 5.4 * GB, uploadedOn: '28 Oct 2026, 11:42 AM' },
 ];
-
-/** The status cell — the same block in the row and in the reopened form. */
-function StatusBlock({ r }: { r: AdminImage }) {
-  const status = statusOf(r.phase);
-  const pct = Math.min(100, (r.loaded / Math.max(r.file.size, 1)) * 100);
-  const inTransfer = r.phase === 'uploading' || r.phase === 'paused';
-  return (
-    <div>
-      <div className="flex items-center gap-2">
-        <span className="inline-block whitespace-nowrap rounded-sm px-2 py-0.5 text-[12px] font-medium" style={{ color: TONE[status].fg, background: TONE[status].bg }} title={r.reason}>
-          {status}
-        </span>
-        {inTransfer && <span className="text-[12px] font-semibold tabular-nums text-[#364658]">{Math.round(pct)}%</span>}
-      </div>
-      {inTransfer && (
-        <div className="mt-1.5 w-[220px]">
-          <ProgressBar pct={pct} tone={r.phase === 'paused' ? '#F59E0B' : '#3D8BD0'} />
-          <div className="mt-1 text-[11.5px] text-[#7B8FA5]">
-            {formatBytes(r.loaded)} of {formatBytes(r.file.size)} · {r.phase === 'paused' ? 'Paused' : formatEta((r.file.size - r.loaded) / r.rate)}
-          </div>
-        </div>
-      )}
-      {r.phase === 'validating' && (
-        <div className="mt-1 text-[11.5px] text-[#7B8FA5]">Validating the ISO against the details entered…</div>
-      )}
-      {(r.phase === 'failed' || r.phase === 'validation-failed') && r.reason && (
-        <div className="mt-1 max-w-[280px] whitespace-normal text-[11.5px] leading-[1.45] text-[#DC2626]">{r.reason}</div>
-      )}
-    </div>
-  );
-}
 
 export function AdminOsUpgrade() {
   const [rows, setRows] = useState<AdminImage[]>(EXAMPLES);
@@ -138,8 +52,6 @@ export function AdminOsUpgrade() {
   /* 'new' = Create; an id = that record reopened in the same form. */
   const [form, setForm] = useState<'new' | string | null>(null);
   const [toast, setToast] = useState('');
-  const replaceFor = useRef<string | null>(null);
-  const replaceInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -147,38 +59,6 @@ export function AdminOsUpgrade() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  /* ONE ticker drives every row that is moving. */
-  const moving = rows.some((r) => r.phase === 'uploading' || r.phase === 'validating');
-  useEffect(() => {
-    if (!moving) return;
-    const t = window.setInterval(() => {
-      const done: string[] = [];
-      setRows((rs) => rs.map((r) => {
-        if (r.phase === 'uploading') {
-          const loaded = Math.min(r.file.size, r.loaded + r.rate * 0.2);
-          if (/fail|corrupt/i.test(r.file.name) && loaded / r.file.size >= 0.62) {
-            return { ...r, loaded, phase: 'failed', reason: 'The transfer to the Windows File Server was interrupted. Check the server is reachable, then retry.' };
-          }
-          return loaded >= r.file.size ? { ...r, loaded, ...revalidate() } : { ...r, loaded };
-        }
-        if (r.phase === 'validating' && Date.now() >= (r.verifyAt ?? 0)) {
-          const found = detectFromFileName(r.file.name);
-          const off = compare(r.declared, found).filter((c) => !c.ok);
-          if (off.length) {
-            return { ...r, phase: 'validation-failed', reason: `The ISO doesn't match — ${off.map((c) => `${c.label}: ISO has ${c.found}, entered ${c.declared}`).join(' · ')}` };
-          }
-          done.push(r.id);
-          return { ...r, phase: 'uploaded', uploadedOn: nowStamp() };
-        }
-        return r;
-      }));
-      if (done.length) setToast(`${done.join(', ')} uploaded — ready to deploy`);
-    }, 200);
-    return () => window.clearInterval(t);
-  }, [moving]);
-
-  const patch = (id: string, p: Partial<AdminImage>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...p } : r)));
-  const stop = (id: string) => patch(id, { phase: 'failed', reason: 'Upload stopped.' });
   const remove = (id: string) => { setRows((rs) => rs.filter((x) => x.id !== id)); setToast(`${id} deleted`); };
 
   const query = q.trim().toLowerCase();
@@ -195,7 +75,6 @@ export function AdminOsUpgrade() {
 
   const th = 'whitespace-nowrap px-4 py-2.5 text-left text-[12px] font-semibold tracking-wider text-[#364658]';
   const td = 'whitespace-nowrap px-4 py-3 align-top text-[13px] text-[#364658]';
-  const iconBtn = 'flex size-8 items-center justify-center rounded text-[#64748B] hover:bg-[#F5F7FA] hover:text-[#3D8BD0]';
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
@@ -208,18 +87,6 @@ export function AdminOsUpgrade() {
           </button>
         </p>
       </div>
-
-      {/* Re-upload for a row that failed its transfer or its validation. */}
-      <input
-        ref={replaceInput} type="file" accept=".iso" className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]; e.target.value = '';
-          const id = replaceFor.current; if (!f || !id) return;
-          const problem = validateIso(f);
-          if (problem) { setToast(problem); return; }
-          patch(id, startTransfer(f));
-        }}
-      />
 
       {rows.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 text-center">
@@ -246,52 +113,36 @@ export function AdminOsUpgrade() {
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-[#e5e7eb]">
-                  {['ID', 'Name', 'Language', 'Size', 'Upload Status', 'Upload Time', 'Action'].map((h) => (
+                  {['ID', 'Name', 'Language', 'Size', 'Upload Time', 'Action'].map((h) => (
                     <th key={h} className={th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e5e7eb] bg-white">
                 {visible.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-14 text-center text-[13px] text-[#7B8FA5]">No OS upgrades match that search.</td></tr>
-                ) : visible.map((r) => {
-                  const inTransfer = r.phase === 'uploading' || r.phase === 'paused';
-                  const broken = r.phase === 'failed' || r.phase === 'validation-failed';
-                  return (
-                    /* The whole row reopens the record's form. */
-                    <tr key={r.id} onClick={() => setForm(r.id)} className="cursor-pointer hover:bg-[#f9fafb]">
-                      <td className={td}><IdPill>{r.id}</IdPill></td>
-                      <td className={td}>
-                        <div className="font-medium">{r.name}</div>
-                        <div className="mt-0.5 text-[12px] text-[#7B8FA5]">
-                          {r.declared.os} · {r.declared.version} · {r.declared.edition} · {r.declared.arch}
-                        </div>
-                        <div className="mt-0.5 max-w-[320px] truncate text-[12px] text-[#9CA3AF]" title={r.file.name}>{r.file.name}</div>
-                      </td>
-                      <td className={td}>{languageLabel(r.declared.language)}</td>
-                      <td className={td}>{formatBytes(r.bytes ?? r.file.size)}</td>
-                      <td className={`${td} w-[280px]`}><StatusBlock r={r} /></td>
-                      <td className={td}>{r.uploadedOn ?? <span className="text-[#9ca3af]">---</span>}</td>
-                      <td className={td} onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center">
-                          {r.phase === 'uploading' && <button onClick={() => patch(r.id, { phase: 'paused' })} title="Pause upload" className={iconBtn}><Pause size={15} /></button>}
-                          {r.phase === 'paused' && <button onClick={() => patch(r.id, { phase: 'uploading' })} title="Resume upload" className={iconBtn}><Play size={15} /></button>}
-                          {inTransfer && <button onClick={() => stop(r.id)} title="Stop upload" className={`${iconBtn} hover:!text-[#DC2626]`}><Square size={14} /></button>}
-                          {r.phase === 'failed' && <button onClick={() => patch(r.id, startTransfer(r.file))} title="Retry upload" className={iconBtn}><RotateCcw size={15} /></button>}
-                          {broken && (
-                            <button onClick={() => { replaceFor.current = r.id; replaceInput.current?.click(); }} title="Upload another ISO" className={iconBtn}><Upload size={15} /></button>
-                          )}
-                          {!inTransfer && r.phase !== 'validating' && (
-                            <button onClick={() => remove(r.id)} title="Delete OS upgrade and its ISO"
-                              className="flex size-8 items-center justify-center rounded text-[#64748B] hover:bg-[#FEF2F2] hover:text-[#DC2626]">
-                              <Trash2 size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                  <tr><td colSpan={6} className="px-4 py-14 text-center text-[13px] text-[#7B8FA5]">No OS upgrades match that search.</td></tr>
+                ) : visible.map((r) => (
+                  /* The whole row reopens the record's form. */
+                  <tr key={r.id} onClick={() => setForm(r.id)} className="cursor-pointer hover:bg-[#f9fafb]">
+                    <td className={td}><IdPill>{r.id}</IdPill></td>
+                    <td className={td}>
+                      <div className="font-medium">{r.name}</div>
+                      <div className="mt-0.5 text-[12px] text-[#7B8FA5]">
+                        {r.declared.os} · {r.declared.version} · {r.declared.edition} · {r.declared.arch}
+                      </div>
+                      <div className="mt-0.5 max-w-[320px] truncate text-[12px] text-[#9CA3AF]" title={r.file.name}>{r.file.name}</div>
+                    </td>
+                    <td className={td}>{languageLabel(r.declared.language)}</td>
+                    <td className={td}>{formatBytes(r.bytes ?? r.file.size)}</td>
+                    <td className={td}>{r.uploadedOn}</td>
+                    <td className={td} onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => remove(r.id)} title="Delete OS upgrade and its ISO"
+                        className="flex size-8 items-center justify-center rounded text-[#64748B] hover:bg-[#FEF2F2] hover:text-[#DC2626]">
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -305,25 +156,9 @@ export function AdminOsUpgrade() {
           id={editing ? editing.id : nextId}
           record={editing}
           onClose={() => setForm(null)}
-          onPause={(id) => patch(id, { phase: 'paused' })}
-          onResume={(id) => patch(id, { phase: 'uploading' })}
-          onStop={stop}
-          onSave={(id, name, declared, file) => {
-            if (!editing) {
-              setRows((rs) => [{ id, name, declared, ...startTransfer(file) }, ...rs]);
-              setToast(`${id} created — uploading the ISO to the Windows File Server`);
-            } else {
-              const fileChanged = file !== editing.file;
-              const detailsChanged = JSON.stringify(declared) !== JSON.stringify(editing.declared);
-              /* A new file goes up again; new details on the same file are checked again —
-                 unless that file has not finished arriving, when the check simply follows. */
-              const busy = editing.phase === 'uploading' || editing.phase === 'paused';
-              patch(id, {
-                name, declared,
-                ...(fileChanged ? startTransfer(file) : detailsChanged && !busy ? revalidate() : {}),
-              });
-              setToast(fileChanged ? `${id} updated — uploading the new ISO` : detailsChanged && !busy ? `${id} updated — validating the ISO again` : `${id} updated`);
-            }
+          onSave={(rec) => {
+            setRows((rs) => (editing ? rs.map((r) => (r.id === rec.id ? rec : r)) : [rec, ...rs]));
+            setToast(editing ? `${rec.id} updated` : `${rec.id} created`);
             setForm(null);
           }}
         />
@@ -340,7 +175,9 @@ export function AdminOsUpgrade() {
 
 // ── Create / Edit OS Upgrade ──────────────────────────────────────────────
 
-const fieldCls = 'h-9 w-full rounded border border-[#DFE5ED] bg-white px-2.5 text-[13px] text-[#364658] placeholder:text-[#9ca3af] focus:border-[#3D8BD0] focus:outline-none focus:ring-1 focus:ring-[#3D8BD0]';
+const fieldCls = 'h-9 w-full rounded border bg-white px-2.5 text-[13px] text-[#364658] placeholder:text-[#9ca3af] focus:outline-none focus:ring-1';
+const okField = `${fieldCls} border-[#DFE5ED] focus:border-[#3D8BD0] focus:ring-[#3D8BD0]`;
+const badField = `${fieldCls} border-[#DC2626] focus:border-[#DC2626] focus:ring-[#DC2626]`;
 
 const Label = ({ children, required, hint }: { children: ReactNode; required?: boolean; hint?: string }) => (
   <label className="mb-1.5 flex items-baseline gap-1 text-[13px] text-[#364658]">
@@ -348,6 +185,9 @@ const Label = ({ children, required, hint }: { children: ReactNode; required?: b
     {hint && <span className="ml-auto text-[11.5px] text-[#9CA3AF]">{hint}</span>}
   </label>
 );
+
+const FieldError = ({ msg }: { msg?: string }) =>
+  msg ? <p className="mt-1 text-[12px] text-[#DC2626]">{msg}</p> : null;
 
 const Section = ({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) => (
   <section className="border-b border-[#F0F2F5] px-6 py-5 last:border-0">
@@ -359,23 +199,37 @@ const Section = ({ title, hint, children }: { title: string; hint?: string; chil
 
 const btnSecondary = 'inline-flex h-8 items-center gap-1.5 rounded border border-[#DFE5ED] bg-white px-3 text-[13px] font-medium text-[#364658] hover:bg-[#F5F7FA]';
 
-function OsUpgradeForm({ id, record, onClose, onSave, onPause, onResume, onStop }: {
+/** The upload of the chosen ISO, run in the form. `ready` = arrived and read. */
+type Upload =
+  | { phase: 'uploading' | 'paused'; loaded: number; rate: number }
+  | { phase: 'reading'; readyAt: number }
+  | { phase: 'ready'; found: Detected }
+  | { phase: 'failed'; reason: string };
+
+/* The demo files are tiny, so a transfer is scaled to take ~6 seconds whatever
+   its size. A file named *fail* / *corrupt* drops at 62%. */
+const beginUpload = (f: File): Upload => ({ phase: 'uploading', loaded: 0, rate: Math.max(f.size / 6, 1) });
+
+/** Field key → the label the ISO check reports it under. */
+const CHECK_LABEL: Record<keyof Declared, string> = {
+  os: 'Operating System', version: 'Version', edition: 'Edition', arch: 'Architecture', language: 'Language',
+};
+
+function OsUpgradeForm({ id, record, onClose, onSave }: {
   id: string;
-  /** Set when a listed record is reopened; null for Create. Live — it updates as the row does. */
+  /** Set when a listed record is reopened; null for Create. */
   record: AdminImage | null;
   onClose: () => void;
-  onSave: (id: string, name: string, declared: Declared, file: File) => void;
-  onPause: (id: string) => void;
-  onResume: (id: string) => void;
-  onStop: (id: string) => void;
+  onSave: (rec: AdminImage) => void;
 }) {
   const [name, setName] = useState(record?.name ?? '');
   const [d, setD] = useState<Declared>(record?.declared ?? { os: 'Windows 11', version: '', edition: 'Pro', arch: 'x64', language: 'en-US' });
   const [file, setFile] = useState<File | null>(record?.file ?? null);
+  /* A reopened record's ISO is already on the server and already read. */
+  const [up, setUp] = useState<Upload | null>(record ? { phase: 'ready', found: detectFromFileName(record.file.name) } : null);
 
   const set = <K extends keyof Declared>(k: K, v: Declared[K]) => setD((x) => ({ ...x, [k]: v }));
 
-  /* Changing OS between client and server swaps the edition list. */
   useEffect(() => {
     if (!editionsFor(d.os).includes(d.edition)) set('edition', editionsFor(d.os)[0]);
   }, [d.os]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -386,10 +240,57 @@ function OsUpgradeForm({ id, record, onClose, onSave, onPause, onResume, onStop 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  /* Drives the upload, then the read of the ISO (the server mounts the WIM). */
+  const moving = up?.phase === 'uploading' || up?.phase === 'reading';
+  useEffect(() => {
+    if (!moving || !file) return;
+    const t = window.setInterval(() => {
+      setUp((u) => {
+        if (!u) return u;
+        if (u.phase === 'uploading') {
+          const loaded = Math.min(file.size, u.loaded + u.rate * 0.2);
+          if (/fail|corrupt/i.test(file.name) && loaded / Math.max(file.size, 1) >= 0.62) {
+            return { phase: 'failed', reason: 'The upload to the Windows File Server was interrupted. Check the server is reachable, then retry.' };
+          }
+          return loaded >= file.size ? { phase: 'reading', readyAt: Date.now() + 1500 } : { ...u, loaded };
+        }
+        if (u.phase === 'reading' && Date.now() >= u.readyAt) return { phase: 'ready', found: detectFromFileName(file.name) };
+        return u;
+      });
+    }, 200);
+    return () => window.clearInterval(t);
+  }, [moving, file]);
+
+  const pick = (f: File | null) => { setFile(f); setUp(f ? beginUpload(f) : null); };
+
+  /* The ISO's details are read once; the comparison follows every edit, so
+     fixing a field clears its error straight away. */
+  const checks = up?.phase === 'ready' ? compare({ ...d, version: d.version.trim().toUpperCase() }, up.found) : [];
+  const mismatches = checks.filter((c) => !c.ok && !(c.label === 'Version' && !d.version.trim()));
+  const errorFor = (k: keyof Declared) => {
+    const c = mismatches.find((m) => m.label === CHECK_LABEL[k]);
+    return c ? `The ISO has ${c.found}` : undefined;
+  };
+
   const missing = [!name.trim() && 'Name', !d.version.trim() && 'Version', !file && 'ISO file'].filter(Boolean) as string[];
-  /* While the record's own file is still travelling, it can't be swapped. */
-  const transferring = !!record && (record.phase === 'uploading' || record.phase === 'paused');
-  const keepsFile = !!record && file === record.file;
+  const blocker =
+    missing.length ? `Required: ${missing.join(' · ')}`
+    : up?.phase === 'uploading' || up?.phase === 'paused' ? 'Wait for the ISO to finish uploading.'
+    : up?.phase === 'reading' ? 'Validating the ISO…'
+    : up?.phase === 'failed' ? 'The ISO upload failed.'
+    : mismatches.length ? 'Fix the validation errors to continue.'
+    : '';
+
+  const save = () => {
+    if (blocker || !file) return;
+    onSave({
+      id, name: name.trim(), declared: { ...d, version: d.version.trim().toUpperCase() }, file,
+      bytes: record && file === record.file ? record.bytes : undefined,
+      uploadedOn: record && file === record.file ? record.uploadedOn : nowStamp(),
+    });
+  };
+
+  const pct = up?.phase === 'uploading' || up?.phase === 'paused' ? Math.min(100, (up.loaded / Math.max(file?.size ?? 1, 1)) * 100) : 0;
 
   return (
     <>
@@ -401,7 +302,7 @@ function OsUpgradeForm({ id, record, onClose, onSave, onPause, onResume, onStop 
               {record ? <><IdPill>{record.id}</IdPill><span className="truncate">{record.name}</span></> : 'Create OS Upgrade'}
             </h2>
             <p className="mt-0.5 text-[12.5px] text-[#7B8FA5]">
-              {record ? 'Edit the details or replace the ISO.' : 'Enter the Windows image details and choose its ISO.'}
+              {record ? 'Edit the details or replace the ISO.' : 'Enter the Windows image details and upload its ISO.'}
             </p>
           </div>
           <button onClick={onClose} title="Close" className="ml-auto flex size-8 flex-none items-center justify-center rounded text-[#64748B] hover:bg-[#F5F7FA]"><X size={18} /></button>
@@ -412,76 +313,116 @@ function OsUpgradeForm({ id, record, onClose, onSave, onPause, onResume, onStop 
             <div className="grid grid-cols-2 gap-x-5 gap-y-4">
               <div className="col-span-2">
                 <Label required>Name</Label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Windows 11 24H2 Pro — Finance" className={fieldCls} />
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Windows 11 24H2 Pro — Finance" className={okField} />
               </div>
               <div>
                 <Label required>Operating System</Label>
-                <select value={d.os} onChange={(e) => set('os', e.target.value)} className={fieldCls}>
+                <select value={d.os} onChange={(e) => set('os', e.target.value)} className={errorFor('os') ? badField : okField}>
                   {OS_FAMILIES.map((f) => <option key={f}>{f}</option>)}
                 </select>
+                <FieldError msg={errorFor('os')} />
               </div>
               <div>
                 <Label required hint="e.g. 24H2, 22H2">Version</Label>
-                <input value={d.version} onChange={(e) => set('version', e.target.value)} placeholder="24H2" className={fieldCls} />
+                <input value={d.version} onChange={(e) => set('version', e.target.value)} placeholder="24H2" className={errorFor('version') ? badField : okField} />
+                <FieldError msg={errorFor('version')} />
               </div>
               <div>
                 <Label required>Edition</Label>
-                <select value={d.edition} onChange={(e) => set('edition', e.target.value)} className={fieldCls}>
+                <select value={d.edition} onChange={(e) => set('edition', e.target.value)} className={errorFor('edition') ? badField : okField}>
                   {editionsFor(d.os).map((f) => <option key={f}>{f}</option>)}
                 </select>
+                <FieldError msg={errorFor('edition')} />
               </div>
               <div>
                 <Label required>Architecture</Label>
-                <select value={d.arch} onChange={(e) => set('arch', e.target.value)} className={fieldCls}>
+                <select value={d.arch} onChange={(e) => set('arch', e.target.value)} className={errorFor('arch') ? badField : okField}>
                   {ARCHITECTURES.map((f) => <option key={f}>{f}</option>)}
                 </select>
+                <FieldError msg={errorFor('arch')} />
               </div>
               <div>
                 <Label required>Language</Label>
-                <select value={d.language} onChange={(e) => set('language', e.target.value)} className={fieldCls}>
+                <select value={d.language} onChange={(e) => set('language', e.target.value)} className={errorFor('language') ? badField : okField}>
                   {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label} · {l.code}</option>)}
                 </select>
+                <FieldError msg={errorFor('language')} />
               </div>
             </div>
           </Section>
 
           <Section title="ISO File">
-            {/* A reopened record shows its upload live, with the row's controls. */}
-            {record && keepsFile && (
-              <div className="mb-4 rounded border border-[#E5E7EB] bg-[#F9FAFB] px-3.5 py-3">
-                <div className="mb-2 text-[12px] text-[#7B8FA5]">Upload Status</div>
-                <StatusBlock r={record} />
-                {transferring && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <button onClick={() => (record.phase === 'paused' ? onResume(record.id) : onPause(record.id))} className={btnSecondary}>
-                      {record.phase === 'paused' ? <><Play size={14} /> Resume</> : <><Pause size={14} /> Pause</>}
-                    </button>
-                    <button onClick={() => onStop(record.id)} className="inline-flex h-8 items-center gap-1.5 rounded border border-[#FEE4E2] bg-white px-3 text-[13px] font-medium text-[#DC2626] hover:bg-[#FEF3F2]">
-                      <Square size={13} /> Stop
-                    </button>
-                  </div>
-                )}
+            <IsoPicker
+              value={file}
+              onChange={pick}
+              size={record && file === record.file && record.bytes ? formatBytes(record.bytes) : undefined}
+              note={null}
+            />
+
+            {/* The upload runs here, in the form. */}
+            {file && up && (up.phase === 'uploading' || up.phase === 'paused') && (
+              <div className="mt-3 rounded border border-[#E5E7EB] bg-[#F9FAFB] px-3.5 py-3">
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="text-[#7B8FA5]">
+                    {formatBytes(up.loaded)} of {formatBytes(file.size)} · {up.phase === 'paused' ? 'Paused' : formatEta((file.size - up.loaded) / up.rate)}
+                  </span>
+                  <span className="font-semibold tabular-nums text-[#364658]">{Math.round(pct)}%</span>
+                </div>
+                <div className="mt-1.5"><ProgressBar pct={pct} tone={up.phase === 'paused' ? '#F59E0B' : '#3D8BD0'} /></div>
+                <div className="mt-3 flex items-center gap-2">
+                  <button onClick={() => setUp({ ...up, phase: up.phase === 'paused' ? 'uploading' : 'paused' })} className={btnSecondary}>
+                    {up.phase === 'paused' ? <><Play size={14} /> Resume</> : <><Pause size={14} /> Pause</>}
+                  </button>
+                  <button onClick={() => pick(null)} className="inline-flex h-8 items-center gap-1.5 rounded border border-[#FEE4E2] bg-white px-3 text-[13px] font-medium text-[#DC2626] hover:bg-[#FEF3F2]">
+                    <Square size={13} /> Stop
+                  </button>
+                </div>
               </div>
             )}
-            {transferring && keepsFile ? (
-              <p className="text-[12.5px] text-[#7B8FA5]">The ISO can be replaced once this upload stops or finishes.</p>
-            ) : (
-              <IsoPicker
-                value={file}
-                onChange={setFile}
-                size={record && keepsFile && record.bytes ? formatBytes(record.bytes) : undefined}
-                note={!record ? undefined : keepsFile ? null : 'The new ISO uploads when you click Update, and the record is validated again.'}
-              />
+
+            {up?.phase === 'reading' && (
+              <div className="mt-3 flex items-center gap-2 rounded border border-[#E5E7EB] bg-[#F9FAFB] px-3.5 py-3 text-[12.5px] text-[#364658]">
+                <Loader2 size={15} className="animate-spin text-[#3D8BD0]" /> Validating the ISO against the details entered…
+              </div>
+            )}
+
+            {up?.phase === 'failed' && file && (
+              <div className="mt-3 flex items-start gap-2 rounded border border-[#FEE4E2] bg-[#FFFBFA] px-3.5 py-3 text-[12.5px] text-[#DC2626]">
+                <AlertCircle size={15} className="mt-px flex-none" />
+                <div className="flex-1">{up.reason}</div>
+                <button onClick={() => setUp(beginUpload(file))} className={btnSecondary}><RotateCcw size={14} /> Retry</button>
+              </div>
+            )}
+
+            {/* Validation error: what disagrees, and how to fix it. */}
+            {up?.phase === 'ready' && mismatches.length > 0 && (
+              <div className="mt-3 rounded border border-[#FEE4E2] bg-[#FFFBFA] px-3.5 py-3">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#DC2626]">
+                  <AlertCircle size={15} /> Validation failed — the ISO doesn't match the details entered
+                </div>
+                <ul className="mt-2 space-y-1 text-[12.5px] text-[#364658]">
+                  {mismatches.map((m) => (
+                    <li key={m.label}><span className="font-medium">{m.label}:</span> entered {m.declared}, the ISO has <span className="font-medium text-[#DC2626]">{m.found}</span></li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[12px] text-[#7B8FA5]">Correct the details above, or remove this file and upload the right ISO.</p>
+              </div>
+            )}
+
+            {up?.phase === 'ready' && mismatches.length === 0 && d.version.trim() && (
+              <div className="mt-3 flex items-center gap-2 rounded border border-[#D1FADF] bg-[#F6FEF9] px-3.5 py-3 text-[12.5px] text-[#22A06B]">
+                <CheckCircle2 size={15} /> ISO validated — it matches the details entered{up.found.build ? ` (build ${up.found.build})` : ''}.
+              </div>
             )}
           </Section>
         </div>
 
         <footer className="flex flex-none items-center gap-2 border-t border-[#e5e7eb] px-6 py-3">
-          {missing.length > 0 && <span className="text-[12px] text-[#7B8FA5]">Required: {missing.join(' · ')}</span>}
+          {blocker && <span className={`text-[12px] ${mismatches.length || up?.phase === 'failed' ? 'text-[#DC2626]' : 'text-[#7B8FA5]'}`}>{blocker}</span>}
           <button onClick={onClose} className="ml-auto h-9 rounded border border-[#DFE5ED] px-4 text-[13px] font-medium text-[#364658] hover:bg-[#F5F7FA]">Cancel</button>
           <button
-            disabled={missing.length > 0}
-            onClick={() => file && onSave(id, name.trim(), { ...d, version: d.version.trim().toUpperCase() }, file)}
+            disabled={!!blocker}
+            onClick={save}
             className="h-9 rounded bg-[#3D8BD0] px-4 text-[13px] font-medium text-white enabled:hover:bg-[#2d6ca0] disabled:cursor-not-allowed disabled:opacity-45"
           >
             {record ? 'Update' : 'Create'}

@@ -13,8 +13,7 @@ import { PATCHES, type Patch } from '../data/patches';
  * is its own page carrying its own title, and each owns its grid — they share
  * almost no columns. OS Upgrades has no saved-view picker and no Create: a
  * technician does not author an operating-system image, and the published set
- * is one set with nothing to pick between. An OS upgrade carries no approval,
- * so its grid has no Approval Status column. OS Upgrades shows no KPI strip. */
+ * is one set with nothing to pick between. OS Upgrades shows no KPI strip. */
 
 export type PatchTab = 'patches' | 'os-upgrades';
 
@@ -82,6 +81,7 @@ export function PatchesPage({ tab, onOpen }: {
       );
     } },
     { key: 'installed', header: 'Installed System', cell: (u) => countsFor(u).onBuild ? <CountChip>{countsFor(u).onBuild}</CountChip> : <Dash /> },
+    { key: 'approval', header: 'Approval Status', cell: (u) => APPROVAL(u.approval) },
     { key: 'upload', header: 'Upload Status', cell: (u) => awaiting(u) ? (
       <button
         onClick={(e) => { e.stopPropagation(); onOpen(u.id, 'files'); }}

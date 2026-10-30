@@ -21,9 +21,9 @@ and no deploy workflow yet.
 Opened from the header **gear** (`#/admin/os-upgrade`). "Back to app" returns.
 
 - **No pre-built catalogue** — a list of Windows versions would need syncing on
-  every Microsoft release; only created OS upgrades appear. Two example records
-  show the two outcomes: OSU-1 **Uploaded**, OSU-2 **Validation Failed** (its ISO
-  is English International, the record says English US).
+  every Microsoft release; only created OS upgrades appear. Two example records,
+  both valid (an invalid ISO cannot be saved). List columns: ID, Name, Language,
+  Size, Upload Time, Action — **no Upload Status**.
 - Dropdowns: **Operating System** = Windows 11 / Windows 10 only; **Edition** =
   every client edition except the Enterprise family (Home, Home N, Home Single
   Language, Pro, Pro N, Pro Education (N), Pro for Workstations (N), Education
@@ -42,18 +42,14 @@ Opened from the header **gear** (`#/admin/os-upgrade`). "Back to app" returns.
   | Language | WIM default language |
 
 - The ISO field is the module's own: "Choose files (or) Drop here" + Browse,
-  then a file chip. **Create closes the panel and adds the row at once**; the
-  ROW carries the upload (% · bar · "X of Y · ETA", Pause / Resume / Stop).
-- **Upload Status** = the module's words — **In Progress · Paused · Uploaded ·
-  Failed** — plus **Validation Failed** for an ISO that arrived but doesn't match
-  the details (with which field and what the ISO has). The product has no
-  mismatch status; its nearest is `DownloadStatus.CHECKSUM_FAILD` ("Checksum
-  Failed", beside plain FAILED), and this follows that "<check> Failed" pattern.
-  Checking the ISO shows as In Progress ("Validating the ISO…"); Stop ends as
-  Failed ("Upload stopped").
-- **Clicking a row reopens the same form**, filled in, with the row's live Upload
-  Status (and Pause/Stop while it transfers). Update: a new ISO uploads again;
-  changed details on the same ISO are validated again.
+  then a file chip. **The upload runs in the form** (% · bar · "X of Y · ETA",
+  Pause / Resume / Stop), then the ISO is validated against the details.
+- **A mismatch is a validation error on the form**: each field that disagrees
+  is outlined red with "The ISO has …", a summary lists them, and
+  **Create / Update stays disabled** until the details or the ISO are fixed.
+  Fixing a field clears its error at once. A failed transfer offers Retry.
+- **Clicking a row reopens the same form**, filled in; its ISO is already
+  validated. Changed details are checked again; a new ISO uploads again.
 - The **Windows File Server required to upload** notice sits in the ISO File
   section, directly above the drop zone.
 - Mock: the upload is simulated and the ISO's metadata is inferred from the
