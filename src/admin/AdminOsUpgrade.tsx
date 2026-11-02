@@ -396,7 +396,8 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
         </div>
 
         <footer className="flex flex-none items-center gap-2 border-t border-[#e5e7eb] px-6 py-3">
-          {blocker && <span className={`text-[12px] ${mismatches.length || up?.phase === 'failed' ? 'text-[#DC2626]' : 'text-[#7B8FA5]'}`}>{blocker}</span>}
+          {/* No "Required: …" line — the * on the labels says it. */}
+          {blocker && !missing.length && <span className={`text-[12px] ${mismatches.length || up?.phase === 'failed' ? 'text-[#DC2626]' : 'text-[#7B8FA5]'}`}>{blocker}</span>}
           <button onClick={onClose} className="ml-auto h-9 rounded border border-[#DFE5ED] px-4 text-[13px] font-medium text-[#364658] hover:bg-[#F5F7FA]">Cancel</button>
           <button
             disabled={!!blocker}
