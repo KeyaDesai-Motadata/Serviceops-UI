@@ -7,6 +7,7 @@ import {
 import { DataTable, Pagination, SearchBar, BucketPills, IdPill, type Column } from '../ui/Table';
 import { DonutCard, IconTile } from '../ui/Overview';
 import { InstallationTab } from '../ui/InstallationTab';
+import { AuditTrail } from '../ui/AuditTrail';
 import { FileDetailsTab, type ImageFile } from '../ui/FileDetailsTab';
 import { installRowsFor } from '../data/install';
 import { byId, eligibleFor, countsFor, needsManualUpload, type Evaluated } from '../data/osUpgrade';
@@ -21,8 +22,10 @@ import { byId, eligibleFor, countsFor, needsManualUpload, type Evaluated } from 
  * by hand, and until it is, every place that names the file says so and points
  * at that tab.
  *
- * ⚠️ An OS upgrade has NO Approve / Decline action and NO Audit Trail tab. Its
- * approval details (Approval Status, Approved By, Approved On) are shown, read-only. */
+ * ⚠️ An OS upgrade has NO Approve / Decline action. Its approval details
+ * (Approval Status, Approved By, Approved On) are shown, read-only. No Upload
+ * Status anywhere (removed 2 Nov 2026): the ISO is validated when the OS upgrade
+ * is created. The Audit Trail tab is back (2 Nov 2026). */
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
@@ -30,6 +33,7 @@ const TABS: TabDef[] = [
   { id: 'endpoint', label: 'Endpoint' },
   { id: 'files', label: 'File Details' },
   { id: 'installation', label: 'Installation' },
+  { id: 'audit', label: 'Audit Trail' },
 ];
 
 const VERDICT_COLOR: Record<string, string> = { Compatible: '#22C55E', Incompatible: '#EF4444' };
@@ -61,10 +65,6 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
   const rows = fleet.filter((r) => r.verdict === bucket).filter((r) =>
     !query || r.endpoint.id.toLowerCase().includes(query) || r.endpoint.hostName.toLowerCase().includes(query) ||
     r.endpoint.ip.includes(query) || r.reasons.join(' ').toLowerCase().includes(query));
-
-  const uploadState = awaiting
-    ? <button onClick={() => setTab('files')} className="text-warn hover:underline">Yet to Upload</button>
-    : 'Success';
 
   const cols: Column<Evaluated>[] = [
     { key: 'id', header: 'ID', cell: (r) => <IdPill>{r.endpoint.id}</IdPill> },
@@ -100,10 +100,6 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
             { label: 'Category', value: 'OS Upgrade' },
             { label: 'Platform', value: u.family },
             { label: 'Edition', value: u.edition },
-            /* Uploaded once the ISO is on the file server; until then nothing can deploy it. */
-            { label: 'Upload Status', value: awaiting
-              ? <button onClick={() => setTab('files')} className="text-warn hover:underline">Yet to Upload</button>
-              : <span className="text-ok">Uploaded</span> },
             { label: 'Approval Status', value: <Dot color={u.approval === 'Approved' ? '#22C55E' : '#F59E0B'}><span className={u.approval === 'Approved' ? 'text-ok' : 'text-warn'}>{u.approval}</span></Dot> },
             { label: 'Release Date', value: u.releaseDate.replace(/^[A-Za-z]{3}, /, '').replace(/ \d{2}:\d{2} [AP]M$/, '') },
             { label: 'End of Support', value: u.eosDate },
@@ -147,8 +143,7 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
                 { label: 'Architecture', value: u.architecture },
                 { label: 'Source', value: manual ? 'Manual Upload' : u.source },
                 { label: 'Status', value: u.status },
-                { label: manual ? 'Upload Status' : 'Download Status', value: awaiting
-                  ? <Dot color="#F59E0B">{uploadState}</Dot> : uploadState },
+                ...(manual ? [] : [{ label: 'Download Status', value: 'Success' }]),
                 { label: manual ? 'Uploaded On' : 'Download On', value: file ? file.uploadedOn : <Dash /> },
                 { label: 'Download Size', value: file ? file.size : <Dash /> },
                 { label: 'Reboot Required', value: u.rebootRequired },
@@ -292,6 +287,22 @@ export function OsUpgradeDetail({ id, onBack, onOpenRun, onDeploy, initialTab, i
       )}
 
       {tab === 'installation' && <InstallationTab rows={installRowsFor(u)} />}
+
+      {tab === 'audit' && (
+        <AuditTrail
+          entries={[
+            { actor: 'System', text: `System has created OS Upgrade ${u.id}.`, when: 'Mon, Sep 21, 2026 05:24 PM' },
+            ...(file ? [{
+              actor: file.uploadedBy,
+              text: manual ? `${file.uploadedBy} uploaded ${file.name} — ${file.size}.` : `Image downloaded from source — ${file.size}.`,
+              when: file.uploadedOn,
+            }] : []),
+            ...(u.approval === 'Approved'
+              ? [{ actor: 'Rakesh Rathod', text: 'Approval Status changed to Approved.', when: 'Mon, Sep 21, 2026 05:31 PM' }]
+              : []),
+          ]}
+        />
+      )}
 
     </RecordPage>
   );

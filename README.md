@@ -58,7 +58,7 @@ rail and pick a sub-module. Records open by clicking a row.
 | | |
 | --- | --- |
 | `#/patches` | Software Patches \| OS Upgrades |
-| `#/patches/OSU-1` | one OS upgrade — Overview · Prerequisites · Endpoint · Installation · Audit Trail |
+| `#/patches/OSU-1` | one OS upgrade — Overview · Prerequisites · Endpoint · File Details · Installation · Audit Trail (no Upload Status anywhere on the technician side) |
 | `#/endpoints` | endpoint listing |
 | `#/endpoints/EP-16` | one endpoint, with OS Upgrade as a fourth patch bucket |
 | `#/deployments` | patch deployment listing |

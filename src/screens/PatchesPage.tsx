@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MonitorUp } from 'lucide-react';
 import { DataTable, Pagination, IdPill, CountChip, ListingHeader, KpiStrip, Toolbar, FilterChip, type Column, type KpiCard } from '../ui/Table';
 import { Dot, Dash } from '../ui/Detail';
-import { OS_UPGRADES, countsFor, needsManualUpload, type OsUpgrade } from '../data/osUpgrade';
+import { OS_UPGRADES, countsFor, type OsUpgrade } from '../data/osUpgrade';
 import { PATCHES, type Patch } from '../data/patches';
 
 /* The Patches page, in the new UI's "List + KPI" layout: page head, a strip of
@@ -29,11 +29,6 @@ const shortDate = (d: string) => d.replace(/^[A-Za-z]{3}, /, '').replace(/ \d{2}
 
 /** End of Support already behind us (the prototype's "today" is Oct 2026). */
 const pastEos = (u: OsUpgrade) => new Date(u.eosDate) < new Date('2026-10-23');
-
-/* Enterprise images the catalogue cannot fetch, still without an ISO. They look
-   deployable from the list otherwise, so Upload Status names them Yet to Upload
-   rather than leaving the cell blank. */
-const awaiting = (u: OsUpgrade) => needsManualUpload(u) && u.downloadStatus !== 'Success';
 
 const PATCH_VIEWS = [{ id: 'missing', label: 'Missing Patches' }, { id: 'all', label: 'All Patches' }];
 
@@ -82,15 +77,6 @@ export function PatchesPage({ tab, onOpen }: {
     } },
     { key: 'installed', header: 'Installed System', cell: (u) => countsFor(u).onBuild ? <CountChip>{countsFor(u).onBuild}</CountChip> : <Dash /> },
     { key: 'approval', header: 'Approval Status', cell: (u) => APPROVAL(u.approval) },
-    { key: 'upload', header: 'Upload Status', cell: (u) => awaiting(u) ? (
-      <button
-        onClick={(e) => { e.stopPropagation(); onOpen(u.id, 'files'); }}
-        title="Open File Details to upload the ISO"
-        className="text-warn hover:underline"
-      >
-        Yet to Upload
-      </button>
-    ) : <span className="text-ok">Success</span> },
   ];
 
   // ── Patches ─────────────────────────────────────────────────────────────
