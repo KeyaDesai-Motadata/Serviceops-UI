@@ -22,25 +22,19 @@ Opened from the header **gear** (`#/admin/os-upgrade`). "Back to app" returns.
 
 - **No pre-built catalogue** — a list of Windows versions would need syncing on
   every Microsoft release; only created OS upgrades appear. Two example records,
-  both valid (an invalid ISO cannot be saved). List columns: ID, Name, Language,
-  Size, Upload Time, Action — **no Upload Status**.
-- Dropdowns: **Operating System** = Windows 11 / Windows 10 only; **Edition** =
-  every client edition except the Enterprise family (Home, Home N, Home Single
-  Language, Pro, Pro N, Pro Education (N), Pro for Workstations (N), Education
-  (N) — no SE, which has no ISO); **Language** = English only — English (US) en-US, English
-  (International) en-GB. No Build column.
-- **Create OS Upgrade** = **Name** (the admin's own label, not checked) then the
-  fields an ISO records about itself, each checked after upload
-  (`src/admin/isoVerify.ts`):
+  both valid (an invalid ISO cannot be saved) — **no Upload Status**.
+- **Create OS Upgrade** = **Name** (the admin's own label, not checked),
+  **Operating System** (Windows 11 / Windows 10) and **Version**, a dropdown that
+  follows the OS — Windows 10: 21H2, 22H2 · Windows 11: 24H2, 25H2, 26H2.
+  Edition, Architecture and Language were removed (2 Nov 2026). Both declared
+  fields are checked against the ISO after upload (`src/admin/isoVerify.ts`):
 
   | Field | Read from the ISO |
   | --- | --- |
   | Operating System | `install.wim` image name / installation type |
   | Version (24H2…) | `DisplayVersion` (or `ReleaseId`) in the image's offline registry |
-  | Edition | `EditionID` of each WIM index — any index satisfies a multi-edition ISO |
-  | Architecture | WIM architecture |
-  | Language | WIM default language |
 
+- List columns: ID, Name, Size, Upload Time, Action (no Language, no Build).
 - The ISO field is the module's own: "Choose files (or) Drop here" + Browse,
   then a file chip. **The upload runs in the form** (% · bar · "X of Y · ETA",
   Pause / Resume / Stop), then the ISO is validated against the details.

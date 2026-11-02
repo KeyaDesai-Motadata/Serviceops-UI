@@ -1,18 +1,16 @@
 /* What an OS upgrade's creator DECLARES, what the uploaded ISO actually
  * CONTAINS, and the comparison between the two.
  *
- * Every declared field is one the ISO records about itself, so each one can be
- * checked rather than trusted:
+ * The form declares two fields, and the ISO records both about itself, so each
+ * one can be checked rather than trusted:
  *
  *   Operating System  install.wim image NAME / installation type (Client|Server)
  *   Version           DisplayVersion (ReleaseId on 1809) in the image's
  *                     offline SOFTWARE registry hive
- *   Edition           EDITIONID of each image index — a multi-edition ISO
- *                     carries several, and any one of them satisfies the field
- *   Architecture      the WIM's ARCHITECTURE (x64 / x86 / ARM64)
- *   Language          the image's default LANGUAGE (en-US …)
- *   Build             the WIM VERSION 10.0.<build> — read and shown, not asked:
- *                     nobody types it correctly, and Version already pins it
+ *   Build             the WIM VERSION 10.0.<build> — read and shown, not asked
+ *
+ * Edition, architecture and language are still READ from the ISO (Detected)
+ * but no longer declared or checked (removed from the form 2 Nov 2026).
  *
  * In the product the backend runs `DISM /Get-WimInfo` (+ the offline registry
  * read) on the file server after the transfer. In this prototype the metadata
@@ -23,6 +21,14 @@
 /* Windows 10 and 11 only (29 Oct 2026). A server ISO is still READ correctly, so
    uploading one simply fails validation on Operating System. */
 export const OS_FAMILIES = ['Windows 11', 'Windows 10'] as const;
+
+/* The versions offered per OS (2 Nov 2026) — Version is a dropdown that follows
+   the Operating System picked. */
+export const VERSIONS: Record<string, string[]> = {
+  'Windows 10': ['21H2', '22H2'],
+  'Windows 11': ['24H2', '25H2', '26H2'],
+};
+export const versionsFor = (os: string) => VERSIONS[os] ?? [];
 
 export const isServer = (os: string) => os.startsWith('Windows Server');
 
@@ -67,8 +73,10 @@ const DEFAULT_VERSION: Record<string, string> = {
   'Windows Server 2025': '24H2', 'Windows Server 2022': '21H2', 'Windows Server 2019': '1809',
 };
 
+/* The form asks only Operating System and Version (2 Nov 2026) — Edition,
+   Architecture and Language were removed, so they are not checked. */
 export interface Declared {
-  os: string; version: string; edition: string; arch: string; language: string;
+  os: string; version: string;
 }
 
 export interface Detected {
@@ -130,9 +138,6 @@ export interface CheckRow {
 export function compare(d: Declared, x: Detected): CheckRow[] {
   return [
     { label: 'Operating System', declared: d.os, found: x.os, ok: d.os === x.os, source: 'install.wim · image name' },
-    { label: 'Version', declared: d.version.trim().toUpperCase() || '—', found: x.version, ok: d.version.trim().toUpperCase() === x.version, source: 'image registry · DisplayVersion' },
-    { label: 'Edition', declared: d.edition, found: x.editions.join(', '), ok: x.editions.includes(d.edition), source: 'install.wim · EditionID per index' },
-    { label: 'Architecture', declared: d.arch, found: x.arch, ok: d.arch === x.arch, source: 'install.wim · architecture' },
-    { label: 'Language', declared: languageLabel(d.language), found: languageLabel(x.language), ok: d.language === x.language, source: 'install.wim · default language' },
+    { label: 'Version', declared: d.version, found: x.version, ok: d.version === x.version, source: 'image registry · DisplayVersion' },
   ];
 }

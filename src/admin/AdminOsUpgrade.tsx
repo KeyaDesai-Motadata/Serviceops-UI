@@ -5,8 +5,7 @@ import {
 import { Pagination, IdPill } from '../ui/Table';
 import { IsoPicker, ProgressBar, formatBytes, formatEta } from './IsoUploader';
 import {
-  OS_FAMILIES, ARCHITECTURES, LANGUAGES, editionsFor, languageLabel,
-  detectFromFileName, compare, type Declared, type Detected,
+  OS_FAMILIES, versionsFor, detectFromFileName, compare, type Declared, type Detected,
 } from './isoVerify';
 
 /* Admin › Patch Management › OS Upgrade.
@@ -40,9 +39,9 @@ const nowStamp = () => {
 const GB = 1024 ** 3;
 /* Two example records, both valid — an invalid ISO can no longer be saved. */
 const EXAMPLES: AdminImage[] = [
-  { id: 'OSU-2', name: 'Windows 10 22H2 Education', declared: { os: 'Windows 10', version: '22H2', edition: 'Education', arch: 'x64', language: 'en-GB' },
+  { id: 'OSU-2', name: 'Windows 10 22H2 Education', declared: { os: 'Windows 10', version: '22H2' },
     file: new File([], 'Win10_22H2_EnglishInternational_x64.iso'), bytes: 5.8 * GB, uploadedOn: '27 Oct 2026, 04:15 PM' },
-  { id: 'OSU-1', name: 'Windows 11 24H2 Pro', declared: { os: 'Windows 11', version: '24H2', edition: 'Pro', arch: 'x64', language: 'en-US' },
+  { id: 'OSU-1', name: 'Windows 11 24H2 Pro', declared: { os: 'Windows 11', version: '24H2' },
     file: new File([], 'Win11_24H2_English_x64.iso'), bytes: 5.4 * GB, uploadedOn: '28 Oct 2026, 11:42 AM' },
 ];
 
@@ -94,7 +93,7 @@ export function AdminOsUpgrade() {
           <h2 className="mt-4 text-[15px] font-semibold text-[#364658]">No OS upgrades yet</h2>
           <p className="mt-1 max-w-[440px] text-[13px] leading-[1.55] text-[#64748B]">
             Create an OS upgrade by uploading its Windows ISO. The ISO is validated against the
-            version, edition, architecture and language you enter.
+            operating system and version you choose.
           </p>
           <div className="mt-5">{cta}</div>
         </div>
@@ -113,14 +112,14 @@ export function AdminOsUpgrade() {
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-[#e5e7eb]">
-                  {['ID', 'Name', 'Language', 'Size', 'Upload Time', 'Action'].map((h) => (
+                  {['ID', 'Name', 'Size', 'Upload Time', 'Action'].map((h) => (
                     <th key={h} className={th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e5e7eb] bg-white">
                 {visible.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-14 text-center text-[13px] text-[#7B8FA5]">No OS upgrades match that search.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-14 text-center text-[13px] text-[#7B8FA5]">No OS upgrades match that search.</td></tr>
                 ) : visible.map((r) => (
                   /* The whole row reopens the record's form. */
                   <tr key={r.id} onClick={() => setForm(r.id)} className="cursor-pointer hover:bg-[#f9fafb]">
@@ -128,11 +127,10 @@ export function AdminOsUpgrade() {
                     <td className={td}>
                       <div className="font-medium">{r.name}</div>
                       <div className="mt-0.5 text-[12px] text-[#7B8FA5]">
-                        {r.declared.os} · {r.declared.version} · {r.declared.edition} · {r.declared.arch}
+                        {r.declared.os} · {r.declared.version}
                       </div>
                       <div className="mt-0.5 max-w-[320px] truncate text-[12px] text-[#9CA3AF]" title={r.file.name}>{r.file.name}</div>
                     </td>
-                    <td className={td}>{languageLabel(r.declared.language)}</td>
                     <td className={td}>{formatBytes(r.bytes ?? r.file.size)}</td>
                     <td className={td}>{r.uploadedOn}</td>
                     <td className={td} onClick={(e) => e.stopPropagation()}>
@@ -211,9 +209,7 @@ type Upload =
 const beginUpload = (f: File): Upload => ({ phase: 'uploading', loaded: 0, rate: Math.max(f.size / 6, 1) });
 
 /** Field key → the label the ISO check reports it under. */
-const CHECK_LABEL: Record<keyof Declared, string> = {
-  os: 'Operating System', version: 'Version', edition: 'Edition', arch: 'Architecture', language: 'Language',
-};
+const CHECK_LABEL: Record<keyof Declared, string> = { os: 'Operating System', version: 'Version' };
 
 function OsUpgradeForm({ id, record, onClose, onSave }: {
   id: string;
@@ -223,15 +219,16 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
   onSave: (rec: AdminImage) => void;
 }) {
   const [name, setName] = useState(record?.name ?? '');
-  const [d, setD] = useState<Declared>(record?.declared ?? { os: 'Windows 11', version: '', edition: 'Pro', arch: 'x64', language: 'en-US' });
+  const [d, setD] = useState<Declared>(record?.declared ?? { os: 'Windows 11', version: versionsFor('Windows 11')[0] });
   const [file, setFile] = useState<File | null>(record?.file ?? null);
   /* A reopened record's ISO is already on the server and already read. */
   const [up, setUp] = useState<Upload | null>(record ? { phase: 'ready', found: detectFromFileName(record.file.name) } : null);
 
   const set = <K extends keyof Declared>(k: K, v: Declared[K]) => setD((x) => ({ ...x, [k]: v }));
 
+  /* Version follows the OS: a new OS resets it to that OS's first version. */
   useEffect(() => {
-    if (!editionsFor(d.os).includes(d.edition)) set('edition', editionsFor(d.os)[0]);
+    if (!versionsFor(d.os).includes(d.version)) set('version', versionsFor(d.os)[0]);
   }, [d.os]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -265,14 +262,14 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
 
   /* The ISO's details are read once; the comparison follows every edit, so
      fixing a field clears its error straight away. */
-  const checks = up?.phase === 'ready' ? compare({ ...d, version: d.version.trim().toUpperCase() }, up.found) : [];
-  const mismatches = checks.filter((c) => !c.ok && !(c.label === 'Version' && !d.version.trim()));
+  const checks = up?.phase === 'ready' ? compare(d, up.found) : [];
+  const mismatches = checks.filter((c) => !c.ok);
   const errorFor = (k: keyof Declared) => {
     const c = mismatches.find((m) => m.label === CHECK_LABEL[k]);
     return c ? `The ISO has ${c.found}` : undefined;
   };
 
-  const missing = [!name.trim() && 'Name', !d.version.trim() && 'Version', !file && 'ISO file'].filter(Boolean) as string[];
+  const missing = [!name.trim() && 'Name', !file && 'ISO file'].filter(Boolean) as string[];
   const blocker =
     missing.length ? `Required: ${missing.join(' · ')}`
     : up?.phase === 'uploading' || up?.phase === 'paused' ? 'Wait for the ISO to finish uploading.'
@@ -284,7 +281,7 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
   const save = () => {
     if (blocker || !file) return;
     onSave({
-      id, name: name.trim(), declared: { ...d, version: d.version.trim().toUpperCase() }, file,
+      id, name: name.trim(), declared: d, file,
       bytes: record && file === record.file ? record.bytes : undefined,
       uploadedOn: record && file === record.file ? record.uploadedOn : nowStamp(),
     });
@@ -323,30 +320,11 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
                 <FieldError msg={errorFor('os')} />
               </div>
               <div>
-                <Label required hint="e.g. 24H2, 22H2">Version</Label>
-                <input value={d.version} onChange={(e) => set('version', e.target.value)} placeholder="24H2" className={errorFor('version') ? badField : okField} />
+                <Label required>Version</Label>
+                <select value={d.version} onChange={(e) => set('version', e.target.value)} className={errorFor('version') ? badField : okField}>
+                  {versionsFor(d.os).map((v) => <option key={v}>{v}</option>)}
+                </select>
                 <FieldError msg={errorFor('version')} />
-              </div>
-              <div>
-                <Label required>Edition</Label>
-                <select value={d.edition} onChange={(e) => set('edition', e.target.value)} className={errorFor('edition') ? badField : okField}>
-                  {editionsFor(d.os).map((f) => <option key={f}>{f}</option>)}
-                </select>
-                <FieldError msg={errorFor('edition')} />
-              </div>
-              <div>
-                <Label required>Architecture</Label>
-                <select value={d.arch} onChange={(e) => set('arch', e.target.value)} className={errorFor('arch') ? badField : okField}>
-                  {ARCHITECTURES.map((f) => <option key={f}>{f}</option>)}
-                </select>
-                <FieldError msg={errorFor('arch')} />
-              </div>
-              <div>
-                <Label required>Language</Label>
-                <select value={d.language} onChange={(e) => set('language', e.target.value)} className={errorFor('language') ? badField : okField}>
-                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label} · {l.code}</option>)}
-                </select>
-                <FieldError msg={errorFor('language')} />
               </div>
             </div>
           </Section>
@@ -409,7 +387,7 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
               </div>
             )}
 
-            {up?.phase === 'ready' && mismatches.length === 0 && d.version.trim() && (
+            {up?.phase === 'ready' && mismatches.length === 0 && (
               <div className="mt-3 flex items-center gap-2 rounded border border-[#D1FADF] bg-[#F6FEF9] px-3.5 py-3 text-[12.5px] text-[#22A06B]">
                 <CheckCircle2 size={15} /> ISO validated — it matches the details entered{up.found.build ? ` (build ${up.found.build})` : ''}.
               </div>
