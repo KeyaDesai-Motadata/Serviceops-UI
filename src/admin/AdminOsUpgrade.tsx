@@ -187,11 +187,11 @@ const Label = ({ children, required, hint }: { children: ReactNode; required?: b
 const FieldError = ({ msg }: { msg?: string }) =>
   msg ? <p className="mt-1 text-[12px] text-[#DC2626]">{msg}</p> : null;
 
-const Section = ({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) => (
+const Section = ({ title, hint, children }: { title?: string; hint?: string; children: ReactNode }) => (
   <section className="border-b border-[#F0F2F5] px-6 py-5 last:border-0">
-    <h3 className="text-[14px] font-semibold text-[#364658]">{title}</h3>
+    {title && <h3 className="text-[14px] font-semibold text-[#364658]">{title}</h3>}
     {hint && <p className="mt-0.5 text-[12.5px] text-[#7B8FA5]">{hint}</p>}
-    <div className="mt-4">{children}</div>
+    <div className={title || hint ? 'mt-4' : ''}>{children}</div>
   </section>
 );
 
@@ -306,7 +306,7 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
         </header>
 
         <div className="scroll-y min-h-0 flex-1">
-          <Section title="Windows Image" hint="The ISO you upload is validated against these details.">
+          <Section>
             <div className="grid grid-cols-2 gap-x-5 gap-y-4">
               <div className="col-span-2">
                 <Label required>Name</Label>
