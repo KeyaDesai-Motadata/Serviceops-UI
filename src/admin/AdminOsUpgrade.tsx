@@ -22,7 +22,7 @@ import {
  * the list carries no Upload Status. */
 
 interface AdminImage {
-  id: string; name: string; declared: Declared;
+  id: string; declared: Declared;
   file: File;
   /** Size to show when the File is only a stand-in (the example records). */
   bytes?: number;
@@ -39,9 +39,9 @@ const nowStamp = () => {
 const GB = 1024 ** 3;
 /* Two example records, both valid — an invalid ISO can no longer be saved. */
 const EXAMPLES: AdminImage[] = [
-  { id: 'OSU-2', name: 'Windows 10 22H2 Education', declared: { os: 'Windows 10', version: '22H2' },
+  { id: 'OSU-2', declared: { os: 'Windows 10', version: '22H2' },
     file: new File([], 'Win10_22H2_EnglishInternational_x64.iso'), bytes: 5.8 * GB, uploadedOn: '27 Oct 2026, 04:15 PM' },
-  { id: 'OSU-1', name: 'Windows 11 24H2 Pro', declared: { os: 'Windows 11', version: '24H2' },
+  { id: 'OSU-1', declared: { os: 'Windows 11', version: '24H2' },
     file: new File([], 'Win11_24H2_English_x64.iso'), bytes: 5.4 * GB, uploadedOn: '28 Oct 2026, 11:42 AM' },
 ];
 
@@ -62,7 +62,7 @@ export function AdminOsUpgrade() {
 
   const query = q.trim().toLowerCase();
   const visible = rows.filter((r) =>
-    !query || r.id.toLowerCase().includes(query) || r.name.toLowerCase().includes(query) || r.file.name.toLowerCase().includes(query));
+    !query || r.id.toLowerCase().includes(query) || `${r.declared.os} ${r.declared.version}`.toLowerCase().includes(query) || r.file.name.toLowerCase().includes(query));
   const nextId = `OSU-${rows.length ? Math.max(...rows.map((r) => Number(r.id.split('-')[1]) || 0)) + 1 : 1}`;
   const editing = form && form !== 'new' ? rows.find((r) => r.id === form) ?? null : null;
 
@@ -112,7 +112,7 @@ export function AdminOsUpgrade() {
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-[#e5e7eb]">
-                  {['ID', 'Name', 'Size', 'Upload Time', 'Action'].map((h) => (
+                  {['ID', 'Operating System', 'Size', 'Upload Time', 'Action'].map((h) => (
                     <th key={h} className={th}>{h}</th>
                   ))}
                 </tr>
@@ -125,10 +125,7 @@ export function AdminOsUpgrade() {
                   <tr key={r.id} onClick={() => setForm(r.id)} className="cursor-pointer hover:bg-[#f9fafb]">
                     <td className={td}><IdPill>{r.id}</IdPill></td>
                     <td className={td}>
-                      <div className="font-medium">{r.name}</div>
-                      <div className="mt-0.5 text-[12px] text-[#7B8FA5]">
-                        {r.declared.os} · {r.declared.version}
-                      </div>
+                      <div className="font-medium">{r.declared.os} · {r.declared.version}</div>
                       <div className="mt-0.5 max-w-[320px] truncate text-[12px] text-[#9CA3AF]" title={r.file.name}>{r.file.name}</div>
                     </td>
                     <td className={td}>{formatBytes(r.bytes ?? r.file.size)}</td>
@@ -218,7 +215,6 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
   onClose: () => void;
   onSave: (rec: AdminImage) => void;
 }) {
-  const [name, setName] = useState(record?.name ?? '');
   const [d, setD] = useState<Declared>(record?.declared ?? { os: 'Windows 11', version: versionsFor('Windows 11')[0] });
   const [file, setFile] = useState<File | null>(record?.file ?? null);
   /* A reopened record's ISO is already on the server and already read. */
@@ -269,7 +265,7 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
     return c ? `The ISO has ${c.found}` : undefined;
   };
 
-  const missing = [!name.trim() && 'Name', !file && 'ISO file'].filter(Boolean) as string[];
+  const missing = [!file && 'ISO file'].filter(Boolean) as string[];
   const blocker =
     missing.length ? `Required: ${missing.join(' · ')}`
     : up?.phase === 'uploading' || up?.phase === 'paused' ? 'Wait for the ISO to finish uploading.'
@@ -281,7 +277,7 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
   const save = () => {
     if (blocker || !file) return;
     onSave({
-      id, name: name.trim(), declared: d, file,
+      id, declared: d, file,
       bytes: record && file === record.file ? record.bytes : undefined,
       uploadedOn: record && file === record.file ? record.uploadedOn : nowStamp(),
     });
@@ -296,7 +292,7 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
         <header className="flex flex-none items-center gap-3 border-b border-[#e5e7eb] px-6 py-4">
           <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-[16px] font-semibold text-[#364658]">
-              {record ? <><IdPill>{record.id}</IdPill><span className="truncate">{record.name}</span></> : 'Create OS Upgrade'}
+              {record ? <><IdPill>{record.id}</IdPill><span className="truncate">{record.declared.os} · {record.declared.version}</span></> : 'Create OS Upgrade'}
             </h2>
             <p className="mt-0.5 text-[12.5px] text-[#7B8FA5]">
               {record ? 'Edit the details or replace the ISO.' : 'Enter the Windows image details and upload its ISO.'}
@@ -308,10 +304,6 @@ function OsUpgradeForm({ id, record, onClose, onSave }: {
         <div className="scroll-y min-h-0 flex-1">
           <Section>
             <div className="grid grid-cols-2 gap-x-5 gap-y-4">
-              <div className="col-span-2">
-                <Label required>Name</Label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Windows 11 24H2 Pro — Finance" className={okField} />
-              </div>
               <div>
                 <Label required>Operating System</Label>
                 <select value={d.os} onChange={(e) => set('os', e.target.value)} className={errorFor('os') ? badField : okField}>
